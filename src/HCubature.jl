@@ -7,6 +7,7 @@ import Combinatorics, DataStructures, QuadGK
 export hcubature
 
 include("genz-malik.jl")
+include("gauss-kronrod.jl")
 
 struct Box{n,T<:Real,TI,TE<:Real}
     a::SVector{n,T}
@@ -17,8 +18,19 @@ struct Box{n,T<:Real,TI,TE<:Real}
 end
 Base.isless(i::Box, j::Box) = isless(i.E, j.E)
 
+cubrule(::Type{Val{n}}, ::Type{T}) where {n,T} = GenzMalik(Val{n}, T)
+cubrule(::Type{Val{1}}, ::Type{T}) where {T} = GaussKronrod(T)
+
+# trivial rule for 0-dimensional integrals
+struct Trivial; end
+function (r::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
+    I = f(a)
+    return I, norm(I - I), 1
+end
+cubrule(::Type{Val{0}}, ::Type{T}) where {T} = Trivial()
+
 function hcubature(f, a::SVector{n,T}, b::SVector{n,T}; norm=vecnorm, rtol=sqrt(eps(T)), atol=zero(T), maxevals::Integer=typemax(Int)) where {n, T<:AbstractFloat}
-    rule = GenzMalik(Val{n}, T)
+    rule = cubrule(Val{n}, T)
     firstbox = Box(a,b, rule(f, a,b, norm)...)
     boxes = DataStructures.binary_maxheap(typeof(firstbox))
     push!(boxes, firstbox)
