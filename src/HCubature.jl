@@ -164,7 +164,7 @@ function hcubature(f, a::SVector{n,T}, b::SVector{n,T}; norm=vecnorm, rtol=sqrt(
         I += boxes.valtree[i].I
         E += boxes.valtree[i].E
     end
-    return (I,E,numevals)
+    return I,E
 end
 
 end # module
