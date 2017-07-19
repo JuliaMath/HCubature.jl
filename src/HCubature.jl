@@ -49,6 +49,8 @@ struct GenzMalik{n,T<:AbstractFloat}
 end
 
 function GenzMalik(::Type{Val{n}}, ::Type{T}=Float64) where {n, T<:AbstractFloat}
+    n < 2 && throw(ArgumentError("invalid dimension $n: GenzMalik rule requires dimension > 2"))
+
     λ₄ = sqrt(9/T(10))
     λ₂ = sqrt(9/T(70))
     λ₃ = λ₄
@@ -127,8 +129,8 @@ end
 Base.isless(i::Box, j::Box) = isless(i.E, j.E)
 
 function hcubature(f, a::SVector{n,T}, b::SVector{n,T}; norm=vecnorm, rtol=sqrt(eps(T)), atol=zero(T), maxevals::Integer=typemax(Int)) where {n, T<:AbstractFloat}
-    g = GenzMalik(Val{n}, T)
-    firstbox = Box(a,b, g(f, a,b, norm)...)
+    rule = GenzMalik(Val{n}, T)
+    firstbox = Box(a,b, rule(f, a,b, norm)...)
     boxes = DataStructures.binary_maxheap(typeof(firstbox))
     push!(boxes, firstbox)
     I = firstbox.I
@@ -148,8 +150,8 @@ function hcubature(f, a::SVector{n,T}, b::SVector{n,T}; norm=vecnorm, rtol=sqrt(
         mb[box.kdiv] -= w
         b′ = SVector(mb)
         # evaluate and push the two new boxes
-        box1 = Box(a′,box.b, g(f, a′,box.b, norm)...)
-        box2 = Box(box.a,b′, g(f, box.a,b′, norm)...)
+        box1 = Box(a′,box.b, rule(f, a′,box.b, norm)...)
+        box2 = Box(box.a,b′, rule(f, box.a,b′, norm)...)
         push!(boxes, box1)
         push!(boxes, box2)
         I += box1.I + box2.I - box.I
@@ -166,5 +168,14 @@ function hcubature(f, a::SVector{n,T}, b::SVector{n,T}; norm=vecnorm, rtol=sqrt(
     end
     return I,E
 end
+
+function hcubature(f, a::SVector{n,T}, b::SVector{n,S}; kws...) where {n, T<:Real, S<:Real}
+    F = float(promote_type(T, S))
+    return hcubature(f, SVector{n,F}(a), SVector{n,F}(b); kws...)
+end
+hcubature(f, a::AbstractVector{<:Real}, b::AbstractVector{<:Real}; kws...) =
+    hcubature(f, SVector{length(a)}(a), SVector{length(b)}(b); kws...)
+hcubature(f, a::NTuple{n,<:Real}, b::NTuple{n,<:Real}; kws...) where {n} =
+    hcubature(f, SVector{n}(a), SVector{n}(b); kws...)
 
 end # module
