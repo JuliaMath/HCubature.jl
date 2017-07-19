@@ -1,7 +1,7 @@
 # HCubature
 
 [![Build Status](https://travis-ci.org/stevengj/HCubature.jl.svg?branch=master)](https://travis-ci.org/stevengj/HCubature.jl)
-[![Build status](https://ci.appveyor.com/api/github/webhook?id=vjg839dv59l2y4ya)](https://ci.appveyor.com/project/StevenGJohnson/hcubature-jl)
+[![Build status](https://ci.appveyor.com/api/projects/status/olda8nsbsp7yn41n?svg=true)](https://ci.appveyor.com/project/StevenGJohnson/hcubature-jl)
 [![Coverage Status](https://coveralls.io/repos/stevengj/HCubature.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/stevengj/HCubature.jl?branch=master)
 [![codecov.io](http://codecov.io/github/stevengj/HCubature.jl/coverage.svg?branch=master)](http://codecov.io/github/stevengj/HCubature.jl?branch=master)
 
