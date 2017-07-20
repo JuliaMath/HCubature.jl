@@ -122,9 +122,9 @@ function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=vecnorm) wher
         f₃ᵢ = f(c + p₃) + f(c - p₃)
         f₂ += f₂ᵢ
         f₃ += f₃ᵢ
-        # fourth divided difference: f₂ᵢ-2f₁ - 7*(f₃ᵢ-2f₁),
+        # fourth divided difference: f₃ᵢ-2f₁ - 7*(f₂ᵢ-2f₁),
         # where 7 = (λ₃/λ₂)^2 [see van Dooren and de Ridder]
-        divdiff = norm(f₂ᵢ + twelvef₁ - 7 * f₃ᵢ)
+        divdiff = norm(f₃ᵢ + twelvef₁ - 7*f₂ᵢ)
         if divdiff > maxdivdiff
             kdivide = i
             maxdivdiff = divdiff
