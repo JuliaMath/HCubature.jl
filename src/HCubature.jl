@@ -29,17 +29,18 @@ function (r::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
 end
 cubrule(::Type{Val{0}}, ::Type{T}) where {T} = Trivial()
 
-function hcubature(f, a::SVector{n,T}, b::SVector{n,T}; norm=vecnorm, rtol=sqrt(eps(T)), atol=zero(T), maxevals::Integer=typemax(Int)) where {n, T<:AbstractFloat}
+function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol, atol, maxevals) where {n, T<:AbstractFloat}
     rule = cubrule(Val{n}, T)
     firstbox = Box(a,b, rule(f, a,b, norm)...)
     boxes = DataStructures.binary_maxheap(typeof(firstbox))
     push!(boxes, firstbox)
     I = firstbox.I
     E = firstbox.E
+    n == 0 && return I, E # @inbounds below is wrong for n=0
     numevals = 1
     ma = MVector(a)
     mb = MVector(b)
-    while E > max(rtol*norm(I), atol) && numevals < maxevals
+    @inbounds while E > max(rtol*norm(I), atol) && numevals < maxevals
         # get box with largest error
         box = pop!(boxes)
         # split box along dimension kdiv
@@ -70,6 +71,9 @@ function hcubature(f, a::SVector{n,T}, b::SVector{n,T}; norm=vecnorm, rtol=sqrt(
     return I,E
 end
 
+hcubature(f, a::SVector{n,T}, b::SVector{n,T};
+          norm=vecnorm, rtol=sqrt(eps(T)), atol=zero(T), maxevals::Integer=typemax(Int)) where {n, T<:AbstractFloat} =
+    hcubature_(f, a, b, norm, rtol, atol, maxevals)
 function hcubature(f, a::SVector{n,T}, b::SVector{n,S}; kws...) where {n, T<:Real, S<:Real}
     F = float(promote_type(T, S))
     return hcubature(f, SVector{n,F}(a), SVector{n,F}(b); kws...)

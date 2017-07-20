@@ -57,7 +57,7 @@ to an `n`-dimensional Genz-Malik cubature rule over coordinates
 of type `T`.
 """
 struct GenzMalik{n,T<:AbstractFloat}
-    p::NTuple{4,Array{SVector{n,T}}} # points for the last 4 G-M weights
+    p::NTuple{4,Vector{SVector{n,T}}} # points for the last 4 G-M weights
     w::NTuple{5,T}  # weights for the 5 terms in the G-M rule
     w′::NTuple{4,T} # weights for the embedded lower-degree rule
 end
