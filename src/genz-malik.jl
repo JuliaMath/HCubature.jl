@@ -62,12 +62,19 @@ struct GenzMalik{n,T<:AbstractFloat}
     w′::NTuple{4,T} # weights for the embedded lower-degree rule
 end
 
+# cache the Genz-Malik rules so that we don't reconstruct them every time;
+# this mainly matters for simple integrands (low-degree polynomials) that
+# don't require refinement.
+const gmcache = Dict{Tuple{Int,Type}, GenzMalik}()
+
 """
     GenzMalik(Val{n}, T=Float64)
 
 Construct an n-dimensional Genz-Malik rule for coordinates of type `T`.
 """
 function GenzMalik(::Type{Val{n}}, ::Type{T}=Float64) where {n, T<:AbstractFloat}
+    haskey(gmcache, (n,T)) && return gmcache[n,T]::GenzMalik{n,T}
+
     n < 2 && throw(ArgumentError("invalid dimension $n: GenzMalik rule requires dimension > 2"))
 
     λ₄ = sqrt(9/T(10))
@@ -91,7 +98,9 @@ function GenzMalik(::Type{Val{n}}, ::Type{T}=Float64) where {n, T<:AbstractFloat
     p₄ = signcombos(2, λ₄, Val{n})
     p₅ = signcombos(n, λ₅, Val{n})
 
-    return GenzMalik{n,T}((p₂,p₃,p₄,p₅), (w₁,w₂,w₃,w₄,w₅), (w₁′,w₂′,w₃′,w₄′))
+    g = GenzMalik{n,T}((p₂,p₃,p₄,p₅), (w₁,w₂,w₃,w₄,w₅), (w₁′,w₂′,w₃′,w₄′))
+    gmcache[n,T] = g
+    return g
 end
 
 countevals(g::GenzMalik{n}) where {n} = 1 + 4n + 2*n*(n-1) + (1<<n)
