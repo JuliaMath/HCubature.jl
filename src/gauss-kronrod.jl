@@ -10,6 +10,8 @@ end
 GaussKronrod(::Type{T}) where {T<:AbstractFloat} =
     GaussKronrod{T}(QuadGK.kronrod(T,7)...)
 
+countevals(g::GaussKronrod) = 17
+
 function (g::GaussKronrod{T})(f, a_::SVector{1}, b_::SVector{1}, norm=vecnorm) where {T}
     a = a_[1]
     b = b_[1]

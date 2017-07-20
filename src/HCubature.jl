@@ -45,6 +45,7 @@ function (::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
     return I, norm(I - I), 1
 end
 cubrule(::Type{Val{0}}, ::Type{T}) where {T} = Trivial()
+countevals(::Trivial) = 1
 
 function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol, atol, maxevals) where {n, T<:AbstractFloat}
     rule = cubrule(Val{n}, T)
@@ -54,7 +55,7 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol, atol, maxev
     I = firstbox.I
     E = firstbox.E
     n == 0 && return I, E # @inbounds below is wrong for n=0
-    numevals = 1
+    numevals = evals_per_box = countevals(rule)
     ma = MVector(a)
     mb = MVector(b)
     @inbounds while E > max(rtol*norm(I), atol) && numevals < maxevals
@@ -75,7 +76,7 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol, atol, maxev
         push!(boxes, box2)
         I += box1.I + box2.I - box.I
         E += box1.E + box2.E - box.E
-        numevals += 1
+        numevals += 2*evals_per_box
     end
 
     # roundoff paranoia: re-sum

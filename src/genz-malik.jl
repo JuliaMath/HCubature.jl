@@ -94,6 +94,8 @@ function GenzMalik(::Type{Val{n}}, ::Type{T}=Float64) where {n, T<:AbstractFloat
     return GenzMalik{n,T}((p₂,p₃,p₄,p₅), (w₁,w₂,w₃,w₄,w₅), (w₁′,w₂′,w₃′,w₄′))
 end
 
+countevals(g::GenzMalik{n}) where {n} = 1 + 4n + 2*n*(n-1) + (1<<n)
+
 """
     genzmalik(f, a, b, norm=vecnorm)
 
