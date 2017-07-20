@@ -23,7 +23,51 @@ real, complex, and matrix-valued integrands, for example.
 
 ## Usage
 
-(To do.)
+Assuming you've installed the HCubature package (via `Pkg.add`) and
+loaded it with `using HCubature`, you can then use it by calling
+the `hcubature` function:
+
+    hcubature(f, a, b; norm=vecnorm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+
+This computes the n-dimensional integral of f(x), where `n == length(a) == length(b)`,
+over the hypercube whose corners are given by the vectors (or tuples) `a` and `b`.
+That is, dimension `x[i]` is integrated from `a[i]` to `b[i]`.  The
+return value of `hcubature` is a tuple `(I, E)` of the estimated integral
+`I` and an estimated error `E`.
+
+`f` should be a function `f(x)` that takes an n-dimensional vector `x`
+and returns the integrand at `x`.   The integrand can be any type that supports
+`+`, `-`, `*` real, and `norm` functions.  For example, the integrand
+can be real or complex numbers, vectors, matrices, etcetera.
+(For performance, the [StaticArrays](https://github.com/JuliaArrays/StaticArrays.jl)
+package is recommended for use with vector/matrix-valued integrands.)
+
+The integrand `f(x)` will be always be passed an `SVector{n,T}`,
+where `SVector` is an efficient vector type defined in the [StaticArrays](https://github.com/JuliaArrays/StaticArrays.jl)
+package and `T` is a floating-point type determined by promoting
+the endpoint `a` and `b` coordinates to a floating-point type.
+(Your integrand `f` should be type-stable: it should always return
+a value of the same type, given this type of `x`.)
+
+The integrand will never be evaluated exactly at the boundaries of the
+integration volume.  (So, for example, it is possible to have an
+integrand that blows up at the boundaries, as long as the integral
+is finite, though such singularities will slow convergence.)
+
+The integration volume is adaptively subdivided, using a cubature
+rule due to Genz and Malik (1980), until the estimated error `E`
+satisfies `E ≤ max(rtol*norm(I), atol)`, i.e. `rtol` and `atol` are
+the relative and absolute tolerances requested, respectively.
+It also stops if the number of `f` evaluations exceeds `maxevals`.
+The default `rtol` is the square root of the precision `eps(T)`
+of the coordinate type `T` described above.
+
+The error is estimated by `norm(I - I′)`, where `I′` is an alternative
+estimated integral (via an "embedded" lower-order cubature rule.)
+By default, the `norm` function used (for both this and the convergence
+test above) is `vecnorm`, but you can pass an alternative norm by
+the `norm` keyword argument.  (This is especially useful when `f`
+returns a vector of integrands with different scalings.)
 
 ## Algorithm
 
