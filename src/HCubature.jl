@@ -72,7 +72,7 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol, atol, maxev
 end
 
 hcubature(f, a::SVector{n,T}, b::SVector{n,T};
-          norm=vecnorm, rtol=sqrt(eps(T)), atol=zero(T), maxevals::Integer=typemax(Int)) where {n, T<:AbstractFloat} =
+          norm=vecnorm, rtol::Real=sqrt(eps(T)), atol::Real=zero(T), maxevals::Integer=typemax(Int)) where {n, T<:AbstractFloat} =
     hcubature_(f, a, b, norm, rtol, atol, maxevals)
 function hcubature(f, a::SVector{n,T}, b::SVector{n,S}; kws...) where {n, T<:Real, S<:Real}
     F = float(promote_type(T, S))
