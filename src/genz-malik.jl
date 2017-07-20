@@ -104,9 +104,8 @@ to subdivide next.
 """
 function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=vecnorm) where {n,T}
     c = (a+b)*T(0.5)
-    d = b-a
-    V = abs(prod(d))/(1<<n)
-    Δ = d*T(0.5)
+    Δ = (b-a)*T(0.5)
+    V = abs(prod(Δ))
 
     f₁ = f(c)
 
