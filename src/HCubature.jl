@@ -23,7 +23,7 @@ cubrule(::Type{Val{1}}, ::Type{T}) where {T} = GaussKronrod(T)
 
 # trivial rule for 0-dimensional integrals
 struct Trivial; end
-function (r::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
+function (::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
     I = f(a)
     return I, norm(I - I), 1
 end
