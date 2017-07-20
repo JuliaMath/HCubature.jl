@@ -49,16 +49,16 @@ countevals(::Trivial) = 1
 
 function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol, atol, maxevals) where {n, T<:AbstractFloat}
     rule = cubrule(Val{n}, T)
-    firstbox = Box(a,b, rule(f, a,b, norm)...)
+    I, E, kdiv = rule(f, a,b, norm)
+    numevals = evals_per_box = countevals(rule)
+    (E ≤ max(rtol*norm(I), atol) || numevals ≥ maxevals || n == 0) && return I,E
+
+    firstbox = Box(a,b, I,E,kdiv)
     boxes = DataStructures.binary_maxheap(typeof(firstbox))
     push!(boxes, firstbox)
-    I = firstbox.I
-    E = firstbox.E
-    n == 0 && return I, E # @inbounds below is wrong for n=0
-    numevals = evals_per_box = countevals(rule)
     ma = MVector(a)
     mb = MVector(b)
-    @inbounds while E > max(rtol*norm(I), atol) && numevals < maxevals
+    @inbounds while true
         # get box with largest error
         box = pop!(boxes)
         # split box along dimension kdiv
@@ -77,6 +77,8 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol, atol, maxev
         I += box1.I + box2.I - box.I
         E += box1.E + box2.E - box.E
         numevals += 2*evals_per_box
+        # convergence test:
+        (E ≤ max(rtol*norm(I), atol) || numevals ≥ maxevals) && break
     end
 
     # roundoff paranoia: re-sum
