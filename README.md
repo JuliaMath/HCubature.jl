@@ -59,7 +59,8 @@ rule due to Genz and Malik (1980), until the estimated error `E`
 satisfies `E ≤ max(rtol*norm(I), atol)`, i.e. `rtol` and `atol` are
 the relative and absolute tolerances requested, respectively.
 It also stops if the number of `f` evaluations exceeds `maxevals`.
-The default `rtol` is the square root of the precision `eps(T)`
+If neither `atol` nor `rtol` are specified, the
+default `rtol` is the square root of the precision `eps(T)`
 of the coordinate type `T` described above.
 
 The error is estimated by `norm(I - I′)`, where `I′` is an alternative

@@ -47,7 +47,11 @@ end
 cubrule(::Type{Val{0}}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
 
-function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol, atol, maxevals) where {n, T<:AbstractFloat}
+function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals) where {n, T<:AbstractFloat}
+    rtol = rtol_ == 0 == atol ? sqrt(eps(T)) : rtol_
+    (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
+    maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
+
     rule = cubrule(Val{n}, T)
     I, E, kdiv = rule(f, a,b, norm)
     numevals = evals_per_box = countevals(rule)
@@ -91,6 +95,18 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol, atol, maxev
     return I,E
 end
 
+function hcubature_(f, a::SVector{n,T}, b::SVector{n,S},
+                    norm, rtol, atol, maxevals) where {n, T<:Real, S<:Real}
+    F = float(promote_type(T, S))
+    return hcubature_(f, SVector{n,F}(a), SVector{n,F}(b), norm, rtol, atol, maxevals)
+end
+hcubature_(f, a::AbstractVector{<:Real}, b::AbstractVector{<:Real},
+           norm, rtol, atol, maxevals) =
+    hcubature_(f, SVector{length(a)}(a), SVector{length(b)}(b), norm, rtol, atol, maxevals)
+hcubature_(f, a::NTuple{n,<:Real}, b::NTuple{n,<:Real},
+           norm, rtol, atol, maxevals) where {n} =
+    hcubature_(f, SVector{n}(a), SVector{n}(b), norm, rtol, atol, maxevals)
+
 """
     hcubature(f, a, b; norm=vecnorm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
 
@@ -132,18 +148,8 @@ test above) is `vecnorm`, but you can pass an alternative norm by
 the `norm` keyword argument.  (This is especially useful when `f`
 returns a vector of integrands with different scalings.)
 """
-function hcubature end
-
-hcubature(f, a::SVector{n,T}, b::SVector{n,T};
-          norm=vecnorm, rtol::Real=sqrt(eps(T)), atol::Real=zero(T), maxevals::Integer=typemax(Int)) where {n, T<:AbstractFloat} =
+hcubature(f, a, b; norm=vecnorm, rtol::Real=0, atol::Real=0,
+                   maxevals::Integer=typemax(Int)) =
     hcubature_(f, a, b, norm, rtol, atol, maxevals)
-function hcubature(f, a::SVector{n,T}, b::SVector{n,S}; kws...) where {n, T<:Real, S<:Real}
-    F = float(promote_type(T, S))
-    return hcubature(f, SVector{n,F}(a), SVector{n,F}(b); kws...)
-end
-hcubature(f, a::AbstractVector{<:Real}, b::AbstractVector{<:Real}; kws...) =
-    hcubature(f, SVector{length(a)}(a), SVector{length(b)}(b); kws...)
-hcubature(f, a::NTuple{n,<:Real}, b::NTuple{n,<:Real}; kws...) where {n} =
-    hcubature(f, SVector{n}(a), SVector{n}(b); kws...)
 
 end # module
