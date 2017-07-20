@@ -16,7 +16,7 @@ function combos(k::Integer, λ::T, ::Type{Val{n}}) where {n, T<:Number}
     for (i,c) in enumerate(combos)
         v[:] = 0
         v[c] = λ
-        p[i] = SVector(v)
+        p[i] = v
     end
     return p
 end
@@ -37,7 +37,7 @@ function signcombos(k::Integer, λ::T, ::Type{Val{n}}) where {n, T<:Number}
         j = (i-1)*twoᵏ + 1
         v[:] = 0
         v[c] = λ
-        p[j] = copy(v)
+        p[j] = v
         # use a gray code to flip one sign at a time
         graycode = 0
         for s = 1:twoᵏ-1
@@ -45,7 +45,7 @@ function signcombos(k::Integer, λ::T, ::Type{Val{n}}) where {n, T<:Number}
             graycomp = c[trailing_zeros(graycode ⊻ graycode′) + 1]
             graycode = graycode′
             v[graycomp] = -v[graycomp]
-            p[j+s] = SVector(v)
+            p[j+s] = v
         end
     end
     return p
