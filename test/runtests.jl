@@ -4,7 +4,8 @@ using Base.Test
 @testset "simple" begin
       @test hcubature(x -> cos(x[1])*cos(x[2]), [0,0], [1,1])[1] ≈ sin(1)^2 ≈
             @inferred(hcubature(x -> cos(x[1])*cos(x[2]), (0,0), (1,1)))[1]
-      @test @inferred(hcubature(x -> cos(x[1]), (0,), (1,)))[1] ≈ sin(1)
+      @test @inferred(hcubature(x -> cos(x[1]), (0,), (1,)))[1] ≈ sin(1) ≈
+            @inferred(hquadrature(cos, 0, 1))[1]
       @test @inferred(hcubature(x -> cos(x[1]), (0.0f0,), (1.0f0,)))[1] ≈ sin(1.0f0)
       @test @inferred(hcubature(x -> 1.7, SVector{0,Float64}(), SVector{0,Float64}()))[1] == 1.7
 end

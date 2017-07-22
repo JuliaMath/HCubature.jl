@@ -27,6 +27,8 @@ Assuming you've installed the HCubature package (via `Pkg.add`) and
 loaded it with `using HCubature`, you can then use it by calling
 the `hcubature` function:
 
+### `hcubature`
+
     hcubature(f, a, b; norm=vecnorm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
 
 This computes the n-dimensional integral of f(x), where `n == length(a) == length(b)`,
@@ -69,6 +71,18 @@ By default, the `norm` function used (for both this and the convergence
 test above) is `vecnorm`, but you can pass an alternative norm by
 the `norm` keyword argument.  (This is especially useful when `f`
 returns a vector of integrands with different scalings.)
+
+### `hquadrature`
+
+    hquadrature(f, a, b; norm=vecnorm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+
+Compute the (1d) integral of f(x) from `a` to `b`.  The
+return value of `hcubature` is a tuple `(I, E)` of the estimated integral
+`I` and an estimated error `E`.
+
+The other parameters are the same as [`hcubature`](@ref).  `hquadrature``
+is just a convenience wrapper around `hcubature` so that you can work
+with scalar `x`, `a`, and `b`, rather than 1-component vectors.
 
 ## Algorithm
 

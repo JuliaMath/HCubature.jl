@@ -21,7 +21,7 @@ module HCubature
 using Compat, StaticArrays
 import Combinatorics, DataStructures, QuadGK
 
-export hcubature
+export hcubature, hquadrature
 
 include("genz-malik.jl")
 include("gauss-kronrod.jl")
@@ -152,5 +152,20 @@ returns a vector of integrands with different scalings.)
 hcubature(f, a, b; norm=vecnorm, rtol::Real=0, atol::Real=0,
                    maxevals::Integer=typemax(Int)) =
     hcubature_(f, a, b, norm, rtol, atol, maxevals)
+
+"""
+    hquadrature(f, a, b; norm=vecnorm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+
+Compute the integral of f(x) from `a` to `b`.  The
+return value of `hcubature` is a tuple `(I, E)` of the estimated integral
+`I` and an estimated error `E`.
+
+The other parameters are the same as [`hcubature`](@ref).  `hquadrature``
+is just a convenience wrapper around `hcubature` so that you can work
+with scalar `x`, `a`, and `b`, rather than 1-component vectors.
+"""
+hquadrature(f, a, b; norm=vecnorm, rtol::Real=0, atol::Real=0,
+                     maxevals::Integer=typemax(Int)) =
+    hcubature_(x -> f(x[1]), SVector(a), SVector(b), norm, rtol, atol, maxevals)
 
 end # module
