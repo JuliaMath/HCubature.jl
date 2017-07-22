@@ -80,9 +80,14 @@ Compute the (1d) integral of f(x) from `a` to `b`.  The
 return value of `hcubature` is a tuple `(I, E)` of the estimated integral
 `I` and an estimated error `E`.
 
-The other parameters are the same as [`hcubature`](@ref).  `hquadrature``
+The other parameters are the same as `hcubature` (above).  `hquadrature``
 is just a convenience wrapper around `hcubature` so that you can work
 with scalar `x`, `a`, and `b`, rather than 1-component vectors.
+
+Alternatively, for 1d integrals you can import the [QuadGK](https://github.com/JuliaMath/QuadGK.jl) module
+and call the [`quadgk`](https://juliamath.github.io/QuadGK.jl/stable/#QuadGK.quadgk) function, which provides additional flexibility
+e.g. in choosing the order of the quadrature rule.  (`QuadGK` is used
+internally anyway by `HCubature` to compute the quadrature rule.)
 
 ## Algorithm
 

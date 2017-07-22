@@ -163,6 +163,10 @@ return value of `hcubature` is a tuple `(I, E)` of the estimated integral
 The other parameters are the same as [`hcubature`](@ref).  `hquadrature``
 is just a convenience wrapper around `hcubature` so that you can work
 with scalar `x`, `a`, and `b`, rather than 1-component vectors.
+
+Alternatively, for 1d integrals you can import the [`QuadGK`](@ref) module
+and call the [`quadgk`](@ref) function, which provides additional flexibility
+e.g. in choosing the order of the quadrature rule.
 """
 hquadrature(f, a, b; norm=vecnorm, rtol::Real=0, atol::Real=0,
                      maxevals::Integer=typemax(Int)) =
