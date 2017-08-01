@@ -44,3 +44,10 @@ end
       end
       @test HCubature.countevals(HCubature.Trivial()) == 1
 end
+
+@testset "axischoosing" begin
+    #Issue #4
+    let f = x -> 1.0 + (x[1] * x[3] * sin(x[2]))^2
+        @test hcubature(f, (0.0,0.0,-0.2), (0.2,2π,0.2), rtol=1e-6)[1] ≈ (22502//140625)*π rtol=1e-6
+    end
+end
