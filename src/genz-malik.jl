@@ -11,7 +11,7 @@ with k components equal to λ and other components equal to zero.
 """
 function combos(k::Integer, λ::T, ::Type{Val{n}}) where {n, T<:Number}
     combos = Combinatorics.combinations(1:n, k)
-    p = Array{SVector{n,T}}(length(combos))
+    p = Vector{SVector{n,T}}(length(combos))
     v = MVector{n,T}()
     for (i,c) in enumerate(combos)
         v[:] = 0
@@ -31,7 +31,7 @@ with k components equal to ±λ and other components equal to zero
 function signcombos(k::Integer, λ::T, ::Type{Val{n}}) where {n, T<:Number}
     combos = Combinatorics.combinations(1:n, k)
     twoᵏ = 1 << k
-    p = Array{SVector{n,T}}(length(combos) * twoᵏ)
+    p = Vector{SVector{n,T}}(length(combos) * twoᵏ)
     v = MVector{n,T}()
     for (i,c) in enumerate(combos)
         j = (i-1)*twoᵏ + 1
@@ -114,17 +114,17 @@ error `E` (via the given `norm`), and the suggested coordinate `k` ∈ `1:n`
 to subdivide next.
 """
 function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=vecnorm) where {n,T}
-    c = (a+b)*T(0.5)
-    Δ = (b-a)*T(0.5)
-    V = abs(prod(Δ))
+    c = T(0.5).*(a.+b)
+    Δ = T(0.5).*abs.(b.-a)
+    V = prod(Δ)
 
     f₁ = f(c)
 
     f₂ = zero(f₁)
     f₃ = zero(f₁)
-    kdivide = 1
-    maxdivdiff = zero(norm(f₁))
     twelvef₁ = 12f₁
+    maxdivdiff = zero(norm(f₁))
+    divdiff = MVector{n,typeof(maxdivdiff)}()
     for i = 1:n
         p₂ = Δ .* g.p[1][i]
         f₂ᵢ = f(c + p₂) + f(c - p₂)
@@ -134,11 +134,7 @@ function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=vecnorm) wher
         f₃ += f₃ᵢ
         # fourth divided difference: f₃ᵢ-2f₁ - 7*(f₂ᵢ-2f₁),
         # where 7 = (λ₃/λ₂)^2 [see van Dooren and de Ridder]
-        divdiff = norm(f₃ᵢ + twelvef₁ - 7*f₂ᵢ)
-        if divdiff > maxdivdiff
-            kdivide = i
-            maxdivdiff = divdiff
-        end
+        divdiff[i] = norm(f₃ᵢ + twelvef₁ - 7*f₂ᵢ)
     end
 
     f₄ = zero(f₁)
@@ -153,5 +149,19 @@ function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=vecnorm) wher
 
     I = V * (g.w[1]*f₁ + g.w[2]*f₂ + g.w[3]*f₃ + g.w[4]*f₄ + g.w[5]*f₅)
     I′ = V * (g.w′[1]*f₁ + g.w′[2]*f₂ + g.w′[3]*f₃ + g.w′[4]*f₄)
-    return I, norm(I - I′), kdivide
+    E = norm(I - I′)
+
+    # choose axis
+    kdivide = 1
+    δf = 0.001 * E / V
+    for i = 1:n
+        if (δ = divdiff[i] - maxdivdiff) > δf
+            kdivide = i
+            maxdivdiff = divdiff[i]
+        elseif abs(δ) < δf && Δ[i] > Δ[kdivide]
+            kdivide = i
+        end
+    end
+
+    return I, E, kdivide
 end
