@@ -153,7 +153,7 @@ function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=vecnorm) wher
 
     # choose axis
     kdivide = 1
-    δf = 0.001 * E / V
+    δf = E / (10^n * V)
     for i = 1:n
         if (δ = divdiff[i] - maxdivdiff) > δf
             kdivide = i
