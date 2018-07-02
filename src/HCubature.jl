@@ -35,8 +35,8 @@ struct Box{n,T<:Real,TI,TE<:Real}
 end
 Base.isless(i::Box, j::Box) = isless(i.E, j.E)
 
-cubrule(::Type{Val{n}}, ::Type{T}) where {n,T} = GenzMalik(Val{n}, T)
-cubrule(::Type{Val{1}}, ::Type{T}) where {T} = GaussKronrod(T)
+cubrule(v::Val{n}, ::Type{T}) where {n,T} = GenzMalik(v, T)
+cubrule(::Val{1}, ::Type{T}) where {T} = GaussKronrod(T)
 
 # trivial rule for 0-dimensional integrals
 struct Trivial; end
@@ -44,7 +44,7 @@ function (::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
     I = f(a)
     return I, norm(I - I), 1
 end
-cubrule(::Type{Val{0}}, ::Type{T}) where {T} = Trivial()
+cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
 
 function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals) where {n, T<:AbstractFloat}
@@ -52,7 +52,7 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxe
     (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
 
-    rule = cubrule(Val{n}, T)
+    rule = cubrule(Val{n}(), T)
     I, E, kdiv = rule(f, a,b, norm)
     numevals = evals_per_box = countevals(rule)
     (E ≤ max(rtol*norm(I), atol) || numevals ≥ maxevals || n == 0) && return I,E

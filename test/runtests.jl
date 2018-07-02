@@ -38,7 +38,7 @@ end
             @test HCubature.countevals(g) == 1 + 2length(g.w)
       end
       for n = 2:10
-            let g = HCubature.GenzMalik(Val{n}, Float64)
+            let g = HCubature.GenzMalik(Val{n}(), Float64)
                   @test HCubature.countevals(g) == 1 + 4length(g.p[1]) + length(g.p[3]) + length(g.p[4])
             end
       end
