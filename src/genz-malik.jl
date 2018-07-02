@@ -11,11 +11,11 @@ with k components equal to λ and other components equal to zero.
 """
 function combos(k::Integer, λ::T, ::Type{Val{n}}) where {n, T<:Number}
     combos = Combinatorics.combinations(1:n, k)
-    p = Array{SVector{n,T}}(length(combos))
+    p = Array{SVector{n,T}}(undef, length(combos))
     v = MVector{n,T}()
     for (i,c) in enumerate(combos)
-        v[:] = 0
-        v[c] = λ
+        v .= 0
+        v[c] .= λ
         p[i] = v
     end
     return p
@@ -31,12 +31,12 @@ with k components equal to ±λ and other components equal to zero
 function signcombos(k::Integer, λ::T, ::Type{Val{n}}) where {n, T<:Number}
     combos = Combinatorics.combinations(1:n, k)
     twoᵏ = 1 << k
-    p = Array{SVector{n,T}}(length(combos) * twoᵏ)
+    p = Array{SVector{n,T}}(undef, length(combos) * twoᵏ)
     v = MVector{n,T}()
     for (i,c) in enumerate(combos)
         j = (i-1)*twoᵏ + 1
-        v[:] = 0
-        v[c] = λ
+        v .= 0
+        v[c] .= λ
         p[j] = v
         # use a gray code to flip one sign at a time
         graycode = 0
