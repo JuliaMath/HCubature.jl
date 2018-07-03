@@ -4,39 +4,39 @@
 # vol. 6 (no. 4), 295-302 (1980).
 
 """
-    combos(k, λ, Val{n})
+    combos(k, λ, Val{n}())
 
 Return an array of SVector{n} of all n-component vectors
 with k components equal to λ and other components equal to zero.
 """
-function combos(k::Integer, λ::T, ::Type{Val{n}}) where {n, T<:Number}
+function combos(k::Integer, λ::T, ::Val{n}) where {n, T<:Number}
     combos = Combinatorics.combinations(1:n, k)
-    p = Vector{SVector{n,T}}(length(combos))
+    p = Vector{SVector{n,T}}(undef, length(combos))
     v = MVector{n,T}()
     for (i,c) in enumerate(combos)
-        v[:] = 0
-        v[c] = λ
+        v .= 0
+        v[c] .= λ
         p[i] = v
     end
     return p
 end
 
 """
-    signcombos(k, λ, Val{n})
+    signcombos(k, λ, Val{n}())
 
 Return an array of SVector{n} of all n-component vectors
 with k components equal to ±λ and other components equal to zero
 (with all possible signs).
 """
-function signcombos(k::Integer, λ::T, ::Type{Val{n}}) where {n, T<:Number}
+function signcombos(k::Integer, λ::T, ::Val{n}) where {n, T<:Number}
     combos = Combinatorics.combinations(1:n, k)
     twoᵏ = 1 << k
-    p = Vector{SVector{n,T}}(length(combos) * twoᵏ)
+    p = Vector{SVector{n,T}}(undef, length(combos) * twoᵏ)
     v = MVector{n,T}()
     for (i,c) in enumerate(combos)
         j = (i-1)*twoᵏ + 1
-        v[:] = 0
-        v[c] = λ
+        v .= 0
+        v[c] .= λ
         p[j] = v
         # use a gray code to flip one sign at a time
         graycode = 0
@@ -68,11 +68,11 @@ end
 const gmcache = Dict{Tuple{Int,Type}, GenzMalik}()
 
 """
-    GenzMalik(Val{n}, T=Float64)
+    GenzMalik(Val{n}(), T=Float64)
 
 Construct an n-dimensional Genz-Malik rule for coordinates of type `T`.
 """
-function GenzMalik(::Type{Val{n}}, ::Type{T}=Float64) where {n, T<:AbstractFloat}
+function GenzMalik(v::Val{n}, ::Type{T}=Float64) where {n, T<:AbstractFloat}
     haskey(gmcache, (n,T)) && return gmcache[n,T]::GenzMalik{n,T}
 
     n < 2 && throw(ArgumentError("invalid dimension $n: GenzMalik rule requires dimension > 2"))
@@ -93,10 +93,10 @@ function GenzMalik(::Type{Val{n}}, ::Type{T}=Float64) where {n, T<:AbstractFloat
     w₂′ = twoⁿ * (245/T(486))
     w₁′ = twoⁿ * ((729 - 950n + 50n^2)/T(729))
 
-    p₂ = combos(1, λ₂, Val{n})
-    p₃ = combos(1, λ₃, Val{n})
-    p₄ = signcombos(2, λ₄, Val{n})
-    p₅ = signcombos(n, λ₅, Val{n})
+    p₂ = combos(1, λ₂, v)
+    p₃ = combos(1, λ₃, v)
+    p₄ = signcombos(2, λ₄, v)
+    p₅ = signcombos(n, λ₅, v)
 
     g = GenzMalik{n,T}((p₂,p₃,p₄,p₅), (w₁,w₂,w₃,w₄,w₅), (w₁′,w₂′,w₃′,w₄′))
     gmcache[n,T] = g
