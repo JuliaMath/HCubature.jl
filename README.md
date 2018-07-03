@@ -29,7 +29,7 @@ the `hcubature` function:
 
 ### `hcubature`
 
-    hcubature(f, a, b; norm=vecnorm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+    hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
 
 This computes the n-dimensional integral of f(x), where `n == length(a) == length(b)`,
 over the hypercube whose corners are given by the vectors (or tuples) `a` and `b`.
@@ -68,13 +68,13 @@ of the coordinate type `T` described above.
 The error is estimated by `norm(I - I′)`, where `I′` is an alternative
 estimated integral (via an "embedded" lower-order cubature rule.)
 By default, the `norm` function used (for both this and the convergence
-test above) is `vecnorm`, but you can pass an alternative norm by
+test above) is `norm`, but you can pass an alternative norm by
 the `norm` keyword argument.  (This is especially useful when `f`
 returns a vector of integrands with different scalings.)
 
 ### `hquadrature`
 
-    hquadrature(f, a, b; norm=vecnorm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+    hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
 
 Compute the (1d) integral of f(x) from `a` to `b`.  The
 return value of `hcubature` is a tuple `(I, E)` of the estimated integral
