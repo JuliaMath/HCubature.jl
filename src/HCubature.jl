@@ -18,7 +18,7 @@ real, complex, and matrix-valued integrands, for example.
 """
 module HCubature
 
-using Compat, StaticArrays
+using StaticArrays, LinearAlgebra
 import Combinatorics, DataStructures, QuadGK
 
 export hcubature, hquadrature
@@ -35,8 +35,8 @@ struct Box{n,T<:Real,TI,TE<:Real}
 end
 Base.isless(i::Box, j::Box) = isless(i.E, j.E)
 
-cubrule(::Type{Val{n}}, ::Type{T}) where {n,T} = GenzMalik(Val{n}, T)
-cubrule(::Type{Val{1}}, ::Type{T}) where {T} = GaussKronrod(T)
+cubrule(v::Val{n}, ::Type{T}) where {n,T} = GenzMalik(v, T)
+cubrule(::Val{1}, ::Type{T}) where {T} = GaussKronrod(T)
 
 # trivial rule for 0-dimensional integrals
 struct Trivial; end
@@ -44,7 +44,7 @@ function (::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
     I = f(a)
     return I, norm(I - I), 1
 end
-cubrule(::Type{Val{0}}, ::Type{T}) where {T} = Trivial()
+cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
 
 function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals) where {n, T<:AbstractFloat}
@@ -52,7 +52,7 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxe
     (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
 
-    rule = cubrule(Val{n}, T)
+    rule = cubrule(Val{n}(), T)
     I, E, kdiv = rule(f, a,b, norm)
     numevals = evals_per_box = countevals(rule)
     (E ≤ max(rtol*norm(I), atol) || numevals ≥ maxevals || n == 0) && return I,E
@@ -108,7 +108,7 @@ hcubature_(f, a::NTuple{n,<:Real}, b::NTuple{n,<:Real},
     hcubature_(f, SVector{n}(a), SVector{n}(b), norm, rtol, atol, maxevals)
 
 """
-    hcubature(f, a, b; norm=vecnorm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+    hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
 
 Compute the n-dimensional integral of f(x), where `n == length(a) == length(b)`,
 over the hypercube whose corners are given by the vectors (or tuples) `a` and `b`.
@@ -144,17 +144,17 @@ of the coordinate type `T` described above.
 
 The error is estimated by `norm(I - I′)`, where `I′` is an alternative
 estimated integral (via an "embedded" lower-order cubature rule.)
-By default, the `norm` function used (for both this and the convergence
-test above) is `vecnorm`, but you can pass an alternative norm by
+By default, the norm function used (for both this and the convergence
+test above) is `norm`, but you can pass an alternative norm by
 the `norm` keyword argument.  (This is especially useful when `f`
 returns a vector of integrands with different scalings.)
 """
-hcubature(f, a, b; norm=vecnorm, rtol::Real=0, atol::Real=0,
+hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
                    maxevals::Integer=typemax(Int)) =
     hcubature_(f, a, b, norm, rtol, atol, maxevals)
 
 """
-    hquadrature(f, a, b; norm=vecnorm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+    hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
 
 Compute the integral of f(x) from `a` to `b`.  The
 return value of `hcubature` is a tuple `(I, E)` of the estimated integral
@@ -168,7 +168,7 @@ Alternatively, for 1d integrals you can import the [`QuadGK`](@ref) module
 and call the [`quadgk`](@ref) function, which provides additional flexibility
 e.g. in choosing the order of the quadrature rule.
 """
-hquadrature(f, a, b; norm=vecnorm, rtol::Real=0, atol::Real=0,
+hquadrature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
                      maxevals::Integer=typemax(Int)) =
     hcubature_(x -> f(x[1]), SVector(a), SVector(b), norm, rtol, atol, maxevals)
 
