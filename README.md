@@ -80,7 +80,7 @@ Compute the (1d) integral of f(x) from `a` to `b`.  The
 return value of `hcubature` is a tuple `(I, E)` of the estimated integral
 `I` and an estimated error `E`.
 
-The other parameters are the same as `hcubature` (above).  `hquadrature``
+The other parameters are the same as `hcubature` (above).  `hquadrature`
 is just a convenience wrapper around `hcubature` so that you can work
 with scalar `x`, `a`, and `b`, rather than 1-component vectors.
 
