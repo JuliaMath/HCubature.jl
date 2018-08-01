@@ -1,4 +1,4 @@
-__precompile__()
+VERSION < v"0.7.0-beta2.199" && __precompile__()
 """
 The HCubature module is a pure-Julia implementation of
 multidimensional "h-adaptive" integration.  That is, given
