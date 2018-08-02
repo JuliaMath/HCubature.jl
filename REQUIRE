@@ -1,5 +1,5 @@
 julia 0.7-alpha
-StaticArrays
+StaticArrays 0.8.1
 Combinatorics
 DataStructures
 QuadGK
