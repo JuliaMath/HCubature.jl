@@ -51,3 +51,10 @@ end
         @test hcubature(f, (0.0,0.0,-0.2), (0.2,2π,0.2), rtol=1e-6)[1] ≈ (22502//140625)*π rtol=1e-6
     end
 end
+
+@testset "initdiv" begin
+      for initdiv = 1:5
+            @test sin(1)^2 ≈ hcubature(x -> cos(x[1])*cos(x[2]), [0,0], [1,1], initdiv=initdiv)[1]
+            @test sin(1) ≈ @inferred(hquadrature(cos, 0, 1, initdiv=initdiv))[1]
+      end
+end

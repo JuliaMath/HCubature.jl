@@ -27,7 +27,7 @@ the `hcubature` function:
 
 ### `hcubature`
 
-    hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+    hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
 
 This computes the n-dimensional integral of f(x), where `n == length(a) == length(b)`,
 over the hypercube whose corners are given by the vectors (or tuples) `a` and `b`.
@@ -62,6 +62,7 @@ It also stops if the number of `f` evaluations exceeds `maxevals`.
 If neither `atol` nor `rtol` are specified, the
 default `rtol` is the square root of the precision `eps(T)`
 of the coordinate type `T` described above.
+Initially, the volume is divided into `initdiv` segments along each dimension.
 
 The error is estimated by `norm(I - I′)`, where `I′` is an alternative
 estimated integral (via an "embedded" lower-order cubature rule.)
@@ -72,7 +73,7 @@ returns a vector of integrands with different scalings.)
 
 ### `hquadrature`
 
-    hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+    hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
 
 Compute the (1d) integral of f(x) from `a` to `b`.  The
 return value of `hcubature` is a tuple `(I, E)` of the estimated integral

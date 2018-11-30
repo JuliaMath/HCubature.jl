@@ -47,21 +47,47 @@ end
 cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
 
-function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals) where {n, T<:AbstractFloat}
+function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals, initdiv) where {n, T<:AbstractFloat}
     rtol = rtol_ == 0 == atol ? sqrt(eps(T)) : rtol_
     (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
+    initdiv < 1 && throw(ArgumentError("initdiv must be positive"))
 
     rule = cubrule(Val{n}(), T)
-    I, E, kdiv = rule(f, a,b, norm)
     numevals = evals_per_box = countevals(rule)
-    (E ≤ max(rtol*norm(I), atol) || numevals ≥ maxevals || n == 0) && return I,E
 
-    firstbox = Box(a,b, I,E,kdiv)
+    Δ = (b-a) / initdiv
+    b1 = initdiv == 1 ? b : a+Δ
+    I, E, kdiv = rule(f, a,b1, norm)
+    (n == 0 || iszero(prod(Δ))) && return I,E
+    firstbox = Box(a,b1, I,E,kdiv)
     boxes = DataStructures.binary_maxheap(typeof(firstbox))
     push!(boxes, firstbox)
+
     ma = MVector(a)
     mb = MVector(b)
+
+    if initdiv > 1 # initial box divided by initdiv along each dimension
+        skip = true # skip the first box, which we already added
+        @inbounds for c in CartesianIndices(ntuple(i->Base.OneTo(initdiv), Val{n}())) # Val ntuple loops are unrolled
+            if skip; skip=false; continue; end
+            for i = 1:n
+                ma[i] = a[i]+(c[i]-1)*Δ[i]
+                mb[i] = c[i]==initdiv ? b[i] : a[i]+c[i]*Δ[i]
+            end
+            x = SVector(ma)
+            y = SVector(mb)
+            # this is shorter and has unrolled loops, but somehow creates a type instability:
+            # x = SVector(ntuple(i -> a[i]+(c[i]-1)*Δ[i], Val{n}()))
+            # y = SVector(ntuple(i -> c[i]==initdiv ? b[i] : a[i]+c[i]*Δ[i], Val{n}()))
+            box = Box(x,y, rule(f, x,y, norm)...)
+            I += box.I; E += box.E; numevals += evals_per_box
+            push!(boxes, box)
+        end
+    end
+
+    (E ≤ max(rtol*norm(I), atol) || numevals ≥ maxevals) && return I,E
+
     @inbounds while true
         # get box with largest error
         box = pop!(boxes)
@@ -96,19 +122,19 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxe
 end
 
 function hcubature_(f, a::SVector{n,T}, b::SVector{n,S},
-                    norm, rtol, atol, maxevals) where {n, T<:Real, S<:Real}
+                    norm, rtol, atol, maxevals, initdiv) where {n, T<:Real, S<:Real}
     F = float(promote_type(T, S))
-    return hcubature_(f, SVector{n,F}(a), SVector{n,F}(b), norm, rtol, atol, maxevals)
+    return hcubature_(f, SVector{n,F}(a), SVector{n,F}(b), norm, rtol, atol, maxevals, initdiv)
 end
 hcubature_(f, a::AbstractVector{<:Real}, b::AbstractVector{<:Real},
-           norm, rtol, atol, maxevals) =
-    hcubature_(f, SVector{length(a)}(a), SVector{length(b)}(b), norm, rtol, atol, maxevals)
+           norm, rtol, atol, maxevals, initdiv) =
+    hcubature_(f, SVector{length(a)}(a), SVector{length(b)}(b), norm, rtol, atol, maxevals, initdiv)
 hcubature_(f, a::NTuple{n,<:Real}, b::NTuple{n,<:Real},
-           norm, rtol, atol, maxevals) where {n} =
-    hcubature_(f, SVector{n}(a), SVector{n}(b), norm, rtol, atol, maxevals)
+           norm, rtol, atol, maxevals, initdiv) where {n} =
+    hcubature_(f, SVector{n}(a), SVector{n}(b), norm, rtol, atol, maxevals, initdiv)
 
 """
-    hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+    hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
 
 Compute the n-dimensional integral of f(x), where `n == length(a) == length(b)`,
 over the hypercube whose corners are given by the vectors (or tuples) `a` and `b`.
@@ -141,6 +167,7 @@ It also stops if the number of `f` evaluations exceeds `maxevals`.
 If neither `atol` nor `rtol` are specified, the
 default `rtol` is the square root of the precision `eps(T)`
 of the coordinate type `T` described above.
+Initially, the volume is divided into `initdiv` segments along each dimension.
 
 The error is estimated by `norm(I - I′)`, where `I′` is an alternative
 estimated integral (via an "embedded" lower-order cubature rule.)
@@ -150,11 +177,11 @@ the `norm` keyword argument.  (This is especially useful when `f`
 returns a vector of integrands with different scalings.)
 """
 hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
-                   maxevals::Integer=typemax(Int)) =
-    hcubature_(f, a, b, norm, rtol, atol, maxevals)
+                   maxevals::Integer=typemax(Int), initdiv::Integer=1) =
+    hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv)
 
 """
-    hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int))
+    hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
 
 Compute the integral of f(x) from `a` to `b`.  The
 return value of `hcubature` is a tuple `(I, E)` of the estimated integral
@@ -169,7 +196,7 @@ and call the [`quadgk`](@ref) function, which provides additional flexibility
 e.g. in choosing the order of the quadrature rule.
 """
 hquadrature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
-                     maxevals::Integer=typemax(Int)) =
-    hcubature_(x -> f(x[1]), SVector(a), SVector(b), norm, rtol, atol, maxevals)
+                     maxevals::Integer=typemax(Int), initdiv::Integer=1) =
+    hcubature_(x -> f(x[1]), SVector(a), SVector(b), norm, rtol, atol, maxevals, initdiv)
 
 end # module
