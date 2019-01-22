@@ -61,7 +61,7 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxe
     I, E, kdiv = rule(f, a,b1, norm)
     (n == 0 || iszero(prod(Δ))) && return I,E
     firstbox = Box(a,b1, I,E,kdiv)
-    boxes = DataStructures.binary_maxheap(typeof(firstbox))
+    boxes = DataStructures.BinaryMaxHeap{typeof(firstbox)}()
     push!(boxes, firstbox)
 
     ma = MVector(a)
