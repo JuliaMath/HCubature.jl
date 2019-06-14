@@ -23,7 +23,7 @@ GaussKronrod(::Type{Float64}) = gk_float64
 
 countevals(g::GaussKronrod) = 17
 
-function (g::GaussKronrod{T})(f, a_::SVector{1}, b_::SVector{1}, norm=vecnorm) where {T}
+function (g::GaussKronrod{T})(f, a_::SVector{1}, b_::SVector{1}, norm=norm) where {T}
     a = a_[1]
     b = b_[1]
     c = (a+b)*T(0.5)

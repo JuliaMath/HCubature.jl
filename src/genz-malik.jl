@@ -106,14 +106,14 @@ end
 countevals(g::GenzMalik{n}) where {n} = 1 + 4n + 2*n*(n-1) + (1<<n)
 
 """
-    genzmalik(f, a, b, norm=vecnorm)
+    genzmalik(f, a, b, norm=norm)
 
 Evaluate `genzmalik::GenzMalik` for the box with min/max corners `a` and `b`
 for an integrand `f`.  Returns the estimated integral `I`, the estimated
 error `E` (via the given `norm`), and the suggested coordinate `k` ∈ `1:n`
 to subdivide next.
 """
-function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=vecnorm) where {n,T}
+function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=norm) where {n,T}
     c = T(0.5).*(a.+b)
     Δ = T(0.5).*abs.(b.-a)
     V = prod(Δ)
