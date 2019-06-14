@@ -108,7 +108,8 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxe
         E += box1.E + box2.E - box.E
         numevals += 2*evals_per_box
         # convergence test:
-        (E ≤ max(rtol*norm(I), atol) || numevals ≥ maxevals) && break
+        Inorm = norm(I)
+        (E ≤ max(rtol*Inorm, atol) || numevals ≥ maxevals || !isfinite(Inorm)) && break
     end
 
     # roundoff paranoia: re-sum

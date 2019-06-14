@@ -58,3 +58,8 @@ end
             @test sin(1) ≈ @inferred(hquadrature(cos, 0, 1, initdiv=initdiv))[1]
       end
 end
+
+@testset "NaN and Inf" begin
+      @test hcubature(x -> x[2] < 0 ? NaN : x[1]*x[2], [-1, -1], [1, 1]) === (NaN, NaN)
+      @test hcubature(x -> x[2] < 0 ? Inf : x[1]*x[2], [-1, -1], [1, 1]) === (Inf, NaN)
+end
