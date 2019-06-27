@@ -8,6 +8,8 @@ using Test
             @inferred(hquadrature(cos, 0, 1))[1]
       @test @inferred(hcubature(x -> cos(x[1]), (0.0f0,), (1.0f0,)))[1] ≈ sin(1.0f0)
       @test @inferred(hcubature(x -> 1.7, SVector{0,Float64}(), SVector{0,Float64}()))[1] == 1.7
+      @test @inferred(hcubature(x -> 2, (0,0), (2pi, pi))[1]) ≈ 4pi^2
+      @test_throws DimensionMismatch hcubature(x -> 2, [0,0,0], [2,0])
 end
 
 # function wrapper for counting evaluations

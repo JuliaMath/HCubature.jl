@@ -126,11 +126,13 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,S},
     F = float(promote_type(T, S))
     return hcubature_(f, SVector{n,F}(a), SVector{n,F}(b), norm, rtol, atol, maxevals, initdiv)
 end
-hcubature_(f, a::AbstractVector{<:Real}, b::AbstractVector{<:Real},
-           norm, rtol, atol, maxevals, initdiv) =
-    hcubature_(f, SVector{length(a)}(a), SVector{length(b)}(b), norm, rtol, atol, maxevals, initdiv)
-hcubature_(f, a::NTuple{n,<:Real}, b::NTuple{n,<:Real},
-           norm, rtol, atol, maxevals, initdiv) where {n} =
+function hcubature_(f, a::AbstractVector{<:Real}, b::AbstractVector{<:Real},
+           norm, rtol, atol, maxevals, initdiv)
+    n = length(a)
+    n == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
+    hcubature_(f, SVector{n}(a), SVector{n}(b), norm, rtol, atol, maxevals, initdiv)
+end
+hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv) where {n} =
     hcubature_(f, SVector{n}(a), SVector{n}(b), norm, rtol, atol, maxevals, initdiv)
 
 """
