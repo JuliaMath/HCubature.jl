@@ -1,7 +1,7 @@
 # Gauss-Kronrod quadrature rule, via the QuadGK package, since Genz-Malik
 # rule does not handle the 1d case.  We will just use a fixed-order (7) G-K rule.
 
-struct GaussKronrod{T<:AbstractFloat}
+struct GaussKronrod{T<:Real}
     x::Vector{T}
     w::Vector{T}
     wg::Vector{T}
@@ -11,7 +11,7 @@ end
 # call QuadGK.kronrod every time.
 const gkcache = Dict{Type, GaussKronrod}()
 
-function GaussKronrod(::Type{T}) where {T<:AbstractFloat}
+function GaussKronrod(::Type{T}) where {T<:Real}
     haskey(gkcache, T) && return gkcache[T]::GaussKronrod{T}
     gkcache[T] = g = GaussKronrod{T}(QuadGK.kronrod(T,7)...)
     return g
