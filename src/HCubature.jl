@@ -121,19 +121,15 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxe
     return I,E
 end
 
-function hcubature_(f, a::SVector{n,T}, b::SVector{n,S},
-                    norm, rtol, atol, maxevals, initdiv) where {n, T<:Real, S<:Real}
+function hcubature_(f, a::AbstractVector{T}, b::AbstractVector{S},
+                    norm, rtol, atol, maxevals, initdiv) where {T<:Real, S<:Real}
+    length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
     F = float(promote_type(T, S))
-    return hcubature_(f, SVector{n,F}(a), SVector{n,F}(b), norm, rtol, atol, maxevals, initdiv)
+    return hcubature_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv)
 end
-function hcubature_(f, a::AbstractVector{<:Real}, b::AbstractVector{<:Real},
-           norm, rtol, atol, maxevals, initdiv)
-    n = length(a)
-    n == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
-    hcubature_(f, SVector{n}(a), SVector{n}(b), norm, rtol, atol, maxevals, initdiv)
+function hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv) where {n}
+    hcubature_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm, rtol, atol, maxevals, initdiv)
 end
-hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv) where {n} =
-    hcubature_(f, SVector{n}(a), SVector{n}(b), norm, rtol, atol, maxevals, initdiv)
 
 """
     hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
@@ -197,8 +193,10 @@ Alternatively, for 1d integrals you can import the [`QuadGK`](@ref) module
 and call the [`quadgk`](@ref) function, which provides additional flexibility
 e.g. in choosing the order of the quadrature rule.
 """
-hquadrature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
-                     maxevals::Integer=typemax(Int), initdiv::Integer=1) =
-    hcubature_(x -> f(x[1]), SVector(a), SVector(b), norm, rtol, atol, maxevals, initdiv)
+function hquadrature(f, a::T, b::S; norm=norm, rtol::Real=0, atol::Real=0,
+                     maxevals::Integer=typemax(Int), initdiv::Integer=1) where {T<:Real, S<:Real}
+    F = float(promote_type(T, S))
+    hcubature_(x -> f(x[1]), SVector{1,F}(a), SVector{1,F}(b), norm, rtol, atol, maxevals, initdiv)
+end
 
 end # module
