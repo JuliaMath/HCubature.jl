@@ -56,7 +56,7 @@ end
 to an `n`-dimensional Genz-Malik cubature rule over coordinates
 of type `T`.
 """
-struct GenzMalik{n,T<:AbstractFloat}
+struct GenzMalik{n,T<:Real}
     p::NTuple{4,Vector{SVector{n,T}}} # points for the last 4 G-M weights
     w::NTuple{5,T}  # weights for the 5 terms in the G-M rule
     w′::NTuple{4,T} # weights for the embedded lower-degree rule
@@ -72,7 +72,7 @@ const gmcache = Dict{Tuple{Int,Type}, GenzMalik}()
 
 Construct an n-dimensional Genz-Malik rule for coordinates of type `T`.
 """
-function GenzMalik(v::Val{n}, ::Type{T}=Float64) where {n, T<:AbstractFloat}
+function GenzMalik(v::Val{n}, ::Type{T}=Float64) where {n, T<:Real}
     haskey(gmcache, (n,T)) && return gmcache[n,T]::GenzMalik{n,T}
 
     n < 2 && throw(ArgumentError("invalid dimension $n: GenzMalik rule requires dimension > 2"))
