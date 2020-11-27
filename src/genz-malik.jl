@@ -158,7 +158,7 @@ function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=norm) where {
         if (δ = divdiff[i] - maxdivdiff) > δf
             kdivide = i
             maxdivdiff = divdiff[i]
-        elseif abs(δ) < δf && Δ[i] > Δ[kdivide]
+        elseif abs(δ) <= δf && Δ[i] > Δ[kdivide]
             kdivide = i
         end
     end
