@@ -1,7 +1,6 @@
 # HCubature
 
-[![Build Status](https://travis-ci.org/stevengj/HCubature.jl.svg?branch=master)](https://travis-ci.org/stevengj/HCubature.jl)
-[![Build status](https://ci.appveyor.com/api/projects/status/olda8nsbsp7yn41n?svg=true)](https://ci.appveyor.com/project/StevenGJohnson/hcubature-jl)
+[![Build Status](https://travis-ci.com/stevengj/HCubature.jl.svg?branch=master)](https://travis-ci.com/stevengj/HCubature.jl)
 
 The HCubature module is a pure-Julia implementation of
 multidimensional "h-adaptive" integration.  That is, given
