@@ -11,7 +11,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 DataStructures = "≥ 0.15.0"
-QuadGK = "2.4"
+QuadGK = "2"
 StaticArrays = "≥ 0.8.1"
 julia = "0.7, 1"
 
