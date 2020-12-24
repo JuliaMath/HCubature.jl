@@ -1,7 +1,5 @@
 # HCubature
 
-[![Build Status](https://travis-ci.com/JuliaMath/HCubature.jl.svg?branch=master)](https://travis-ci.com/JuliaMath/HCubature.jl)
-
 The HCubature module is a pure-Julia implementation of
 multidimensional "h-adaptive" integration.  That is, given
 an n-dimensional integral
