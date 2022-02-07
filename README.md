@@ -73,7 +73,7 @@ returns a vector of integrands with different scalings.)
     hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
 
 Compute the (1d) integral of f(x) from `a` to `b`.  The
-return value of `hcubature` is a tuple `(I, E)` of the estimated integral
+return value of `hquadrature` is a tuple `(I, E)` of the estimated integral
 `I` and an estimated error `E`.
 
 The other parameters are the same as `hcubature` (above).  `hquadrature`
