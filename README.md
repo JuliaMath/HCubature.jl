@@ -87,7 +87,7 @@ internally anyway by `HCubature` to compute the quadrature rule.)
 
 ## Algorithm
 
-The algorithm of `hquadrature` is based on the one described in:
+The algorithm of `hcubature` is based on the one described in:
 
 * A. C. Genz and A. A. Malik, "[An adaptive algorithm for numeric integration over an N-dimensional rectangular region](https://doi.org/10.1016/0771-050X(80)90039-X)," *J. Comput. Appl. Math.*, vol. 6 (no. 4), 295-302 (1980).
 
