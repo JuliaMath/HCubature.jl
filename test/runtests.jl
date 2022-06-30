@@ -65,3 +65,14 @@ end
       @test hcubature(x -> x[2] < 0 ? NaN : x[1]*x[2], [-1, -1], [1, 1]) === (NaN, NaN)
       @test hcubature(x -> x[2] < 0 ? Inf : x[1]*x[2], [-1, -1], [1, 1]) === (Inf, NaN)
 end
+
+@testset "Type stability" begin
+      f = x -> 1.
+      lb, ub = [-1. , -1.] , [1. , 1.]
+      @test_throws ErrorException @inferred hcubature(f, lb, ub;
+                  maxevals=typemax(Int)) 
+
+      @test_nowarn @inferred hcubature(f, SVector{2}(lb), SVector{2}(ub);
+                  rtol = 1e-8, atol = 1e-8,
+                  maxevals=typemax(Int)) 
+end

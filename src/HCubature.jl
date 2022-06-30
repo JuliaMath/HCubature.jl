@@ -46,8 +46,8 @@ end
 cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
 
-function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals, initdiv) where {n, T<:Real}
-    rtol = rtol_ == 0 == atol ? sqrt(eps(T)) : rtol_
+function hcubature(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals, initdiv) where {n, T<:Real}
+    rtol = rtol_ == 0. == atol ? sqrt(eps(T)) : rtol_
     (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
     initdiv < 1 && throw(ArgumentError("initdiv must be positive"))
@@ -121,14 +121,14 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxe
     return I,E
 end
 
-function hcubature_(f, a::AbstractVector{T}, b::AbstractVector{S},
+function hcubature(f, a::AbstractVector{T}, b::AbstractVector{S},
                     norm, rtol, atol, maxevals, initdiv) where {T<:Real, S<:Real}
-    length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
+    @assert length(a) == length(b) throw(DimensionMismatch("endpoints $a and $b must have the same length"))
     F = float(promote_type(T, S))
-    return hcubature_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv)
+    return hcubature(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv)
 end
-function hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv) where {n}
-    hcubature_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm, rtol, atol, maxevals, initdiv)
+function hcubature(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv) where {n}
+    hcubature(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm, rtol, atol, maxevals, initdiv)
 end
 
 """
@@ -176,7 +176,7 @@ returns a vector of integrands with different scalings.)
 """
 hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
                    maxevals::Integer=typemax(Int), initdiv::Integer=1) =
-    hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv)
+    hcubature(f, a, b, norm, rtol, atol, maxevals, initdiv)
 
 """
     hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
@@ -196,7 +196,7 @@ e.g. in choosing the order of the quadrature rule.
 function hquadrature(f, a::T, b::S; norm=norm, rtol::Real=0, atol::Real=0,
                      maxevals::Integer=typemax(Int), initdiv::Integer=1) where {T<:Real, S<:Real}
     F = float(promote_type(T, S))
-    hcubature_(x -> f(x[1]), SVector{1,F}(a), SVector{1,F}(b), norm, rtol, atol, maxevals, initdiv)
+    hcubature(x -> f(x[1]), SVector{1,F}(a), SVector{1,F}(b), norm, rtol, atol, maxevals, initdiv)
 end
 
 end # module
