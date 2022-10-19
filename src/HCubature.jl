@@ -45,20 +45,23 @@ function (::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
 end
 cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
-struct FirstEval{TI, TE, TK, TΔ, TB}
+struct FirstEval{TI, TE, TK, TΔ, TB, TR}
   I::TI
   E::TE
   kdiv::TK
   Δ::TΔ
   b1::TB
+  rule::TR
 end
 function FirstEval(f::Function, a, b, norm, initdiv)
+  T = promote_type(eltype(a), eltype(b))
+  L = length(a)
+  @assert L == length(b)
   Δ = (b - a) / initdiv
   b1 = initdiv == 1 ? b : a+Δ
-  rule = cubrule(Val(length(a)), eltype(a))
-  I, E, kdiv = rule(f, SVector{length(a), eltype(a)}(a),
-                       SVector{length(b1), eltype(b1)}(b1), norm)
-  return FirstEval(I, E, kdiv, Δ, b1)
+  rule = cubrule(Val(L), T)
+  I, E, kdiv = rule(f, SVector{L, T}(a), SVector{L, T}(b1), norm)
+  return FirstEval(I, E, kdiv, Δ, b1, rule)
 end
 
 function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
@@ -69,14 +72,15 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
     initdiv < 1 && throw(ArgumentError("initdiv must be positive"))
 
-    rule = cubrule(Val{n}(), T)
-    numevals = evals_per_box = countevals(rule)
 
     I = fe.I
     E = fe.E
     kdiv = fe.kdiv
     Δ = fe.Δ
     b1 = fe.b1
+    rule = fe.rule
+
+    numevals = evals_per_box = countevals(rule)
 
     (n == 0 || iszero(prod(Δ))) && return I,E
     firstbox = Box(a,b1, I,E,kdiv)
