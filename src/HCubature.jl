@@ -72,7 +72,6 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
     initdiv < 1 && throw(ArgumentError("initdiv must be positive"))
 
-
     I = fe.I
     E = fe.E
     kdiv = fe.kdiv
