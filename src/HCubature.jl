@@ -45,8 +45,25 @@ function (::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
 end
 cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
+struct FirstEval{TI, TE, TK, TΔ, TB}
+  I::TI
+  E::TE
+  kdiv::TK
+  Δ::TΔ
+  b1::TB
+end
+function FirstEval(f::Function, a, b, norm, initdiv)
+  Δ = (b - a) / initdiv
+  b1 = initdiv == 1 ? b : a+Δ
+  rule = cubrule(Val(length(a)), eltype(a))
+  I, E, kdiv = rule(f, SVector{length(a), eltype(a)}(a),
+                       SVector{length(b1), eltype(b1)}(b1), norm)
+  return FirstEval(I, E, kdiv, Δ, b1)
+end
 
-function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals, initdiv) where {n, T<:Real}
+function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
+                    maxevals, initdiv, fe::FirstEval{U, V}
+                   )::Tuple{U,V} where {n, T<:Real, U, V}
     rtol = rtol_ == 0 == atol ? sqrt(eps(T)) : rtol_
     (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
@@ -55,9 +72,12 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxe
     rule = cubrule(Val{n}(), T)
     numevals = evals_per_box = countevals(rule)
 
-    Δ = (b-a) / initdiv
-    b1 = initdiv == 1 ? b : a+Δ
-    I, E, kdiv = rule(f, a,b1, norm)
+    I = fe.I
+    E = fe.E
+    kdiv = fe.kdiv
+    Δ = fe.Δ
+    b1 = fe.b1
+
     (n == 0 || iszero(prod(Δ))) && return I,E
     firstbox = Box(a,b1, I,E,kdiv)
     boxes = DataStructures.BinaryMaxHeap{typeof(firstbox)}()
@@ -125,7 +145,9 @@ function hcubature_(f, a::AbstractVector{T}, b::AbstractVector{S},
                     norm, rtol, atol, maxevals, initdiv) where {T<:Real, S<:Real}
     length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
     F = float(promote_type(T, S))
-    return hcubature_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv)
+    a, b = SVector{length(a),F}(a), SVector{length(a),F}(b)
+    fe = FirstEval(f, a, b, norm, initdiv)
+    return hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, fe)
 end
 function hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv) where {n}
     hcubature_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm, rtol, atol, maxevals, initdiv)
