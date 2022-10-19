@@ -45,10 +45,10 @@ function (::Trivial)(f, a::SVector{0}, b::SVector{0}, norm)
 end
 cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
-struct FirstEval{TI, TE, TK, TΔ, TB, TR}
+struct FirstEval{TI, TE, TΔ, TB, TR}
   I::TI
   E::TE
-  kdiv::TK
+  kdiv::Int
   Δ::TΔ
   b1::TB
   rule::TR
