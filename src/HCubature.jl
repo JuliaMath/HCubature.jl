@@ -65,9 +65,9 @@ function FirstEval(f::Function, a, b, norm, initdiv)
   return FirstEval(I, E, kdiv, Δ, b1, rule)
 end
 
-function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
+function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
                     maxevals, initdiv, fe::FirstEval{U, V}
-                   )::Tuple{U,V} where {n, T<:Real, U, V}
+                   )::Tuple{U,V} where {F, n, T<:Real, U, V}
     rtol = rtol_ == 0 == atol ? sqrt(eps(T)) : rtol_
     (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
@@ -145,11 +145,11 @@ function hcubature_(f, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
     return I,E
 end
 
-function hcubature_(f, a::AbstractVector{T}, b::AbstractVector{S},
-                    norm, rtol, atol, maxevals, initdiv) where {T<:Real, S<:Real}
+function hcubature_(f::F, a::AbstractVector{T}, b::AbstractVector{S},
+                    norm, rtol, atol, maxevals, initdiv) where {F, T<:Real, S<:Real}
     length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
-    F = float(promote_type(T, S))
-    a, b = SVector{length(a),F}(a), SVector{length(a),F}(b)
+    U = float(promote_type(T, S))
+    a, b = SVector{length(a),U}(a), SVector{length(a),U}(b)
     fe = FirstEval(f, a, b, norm, initdiv)
     return hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, fe)
 end
@@ -200,8 +200,8 @@ test above) is `norm`, but you can pass an alternative norm by
 the `norm` keyword argument.  (This is especially useful when `f`
 returns a vector of integrands with different scalings.)
 """
-hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
-                   maxevals::Integer=typemax(Int), initdiv::Integer=1) =
+hcubature(f::F, a, b; norm=norm, rtol::Real=0, atol::Real=0,
+                   maxevals::Integer=typemax(Int), initdiv::Integer=1) where F =
     hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv)
 
 """
@@ -219,10 +219,11 @@ Alternatively, for 1d integrals you can import the [`QuadGK`](@ref) module
 and call the [`quadgk`](@ref) function, which provides additional flexibility
 e.g. in choosing the order of the quadrature rule.
 """
-function hquadrature(f, a::T, b::S; norm=norm, rtol::Real=0, atol::Real=0,
-                     maxevals::Integer=typemax(Int), initdiv::Integer=1) where {T<:Real, S<:Real}
-    F = float(promote_type(T, S))
-    hcubature_(x -> f(x[1]), SVector{1,F}(a), SVector{1,F}(b), norm, rtol, atol, maxevals, initdiv)
+function hquadrature(f::F, a::T, b::S; norm=norm, rtol::Real=0, atol::Real=0,
+                     maxevals::Integer=typemax(Int), initdiv::Integer=1) where
+  {F, T<:Real, S<:Real}
+    U = float(promote_type(T, S))
+    hcubature_(x -> f(x[1]), SVector{1,U}(a), SVector{1,U}(b), norm, rtol, atol, maxevals, initdiv)
 end
 
 end # module
