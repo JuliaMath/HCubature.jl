@@ -113,7 +113,7 @@ for an integrand `f`.  Returns the estimated integral `I`, the estimated
 error `E` (via the given `norm`), and the suggested coordinate `k` ∈ `1:n`
 to subdivide next.
 """
-function (g::GenzMalik{n,T})(f, a::SVector{n}, b::SVector{n}, norm=norm) where {n,T}
+function (g::GenzMalik{n,T})(f::F, a::SVector{n}, b::SVector{n}, norm=norm) where {F, n,T}
     c = T(0.5).*(a.+b)
     Δ = T(0.5).*abs.(b.-a)
     V = prod(Δ)
