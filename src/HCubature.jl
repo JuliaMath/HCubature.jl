@@ -176,7 +176,7 @@ the `norm` keyword argument.  (This is especially useful when `f`
 returns a vector of integrands with different scalings.)
 """
 hcubature(f::F, a, b; norm=norm, rtol::Real=0, atol::Real=0,
-                   maxevals::Integer=typemax(Int), initdiv::Integer=1) where F =
+          maxevals::Integer=typemax(Int), initdiv::Integer=1) where F =
     hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv)
 
 """
@@ -196,7 +196,7 @@ e.g. in choosing the order of the quadrature rule.
 """
 function hquadrature(f::F, a::T, b::S; norm=norm, rtol::Real=0, atol::Real=0,
                      maxevals::Integer=typemax(Int), initdiv::Integer=1) where
-  {F, T<:Real, S<:Real}
+                     {F, T<:Real, S<:Real}
     U = float(promote_type(T, S))
     hcubature_(x -> f(x[1]), SVector{1,U}(a), SVector{1,U}(b), norm, rtol, atol, maxevals, initdiv)
 end
