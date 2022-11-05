@@ -21,7 +21,7 @@ end
 const gk_float64 = GaussKronrod{Float64}(QuadGK.kronrod(Float64,7)...)
 GaussKronrod(::Type{Float64}) = gk_float64
 
-countevals(g::GaussKronrod) = 17
+countevals(g::GaussKronrod) = 15
 
 function (g::GaussKronrod{T})(f, a_::SVector{1}, b_::SVector{1}, norm=norm) where {T}
     a = a_[1]
