@@ -37,14 +37,23 @@ end
 
 @testset "countevals" begin
       let g = HCubature.GaussKronrod(Float64)
-            @test HCubature.countevals(g) == 1 + 2length(g.w)
+            @test HCubature.countevals(g) == 2length(g.w) - 1
+            gcnt[] = 0
+            hquadrature(cnt(one), 0, 1)
+            @test HCubature.countevals(g) == gcnt[]
       end
       for n = 2:10
             let g = HCubature.GenzMalik(Val{n}(), Float64)
                   @test HCubature.countevals(g) == 1 + 4length(g.p[1]) + length(g.p[3]) + length(g.p[4])
+                  gcnt[] = 0
+                  hcubature(cnt(x -> 1.0), ntuple(zero, Val{n}()), ntuple(one, Val{n}()))
+                  @test HCubature.countevals(g) == gcnt[]
             end
       end
       @test HCubature.countevals(HCubature.Trivial()) == 1
+      gcnt[] = 0
+      hcubature(cnt(x -> 1.0), SVector{0,Float64}(), SVector{0,Float64}())
+      @test HCubature.countevals(HCubature.Trivial()) == gcnt[]
 end
 
 @testset "axischoosing" begin
