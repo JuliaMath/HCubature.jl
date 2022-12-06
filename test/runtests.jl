@@ -74,3 +74,18 @@ end
       @test hcubature(x -> x[2] < 0 ? NaN : x[1]*x[2], [-1, -1], [1, 1]) === (NaN, NaN)
       @test hcubature(x -> x[2] < 0 ? Inf : x[1]*x[2], [-1, -1], [1, 1]) === (Inf, NaN)
 end
+
+@testset "alloc_buf" begin
+    buffer = alloc_buf(;dimension=1)
+    @test @inferred(hcubature(x -> cos(x[1]), (0,), (1,);buffer=buffer))[1] ≈ sin(1) ≈
+    @inferred(hquadrature(cos, 0, 1; buffer=buffer))[1]
+    buffer = alloc_buf(;dimension=2)
+    @test hcubature(x -> cos(x[1])*cos(x[2]), [0,0], [1,1]; buffer=buffer)[1] ≈ sin(1)^2 ≈
+    @inferred(hcubature(x -> cos(x[1])*cos(x[2]), (0,0), (1,1);buffer=buffer))[1]
+    buffer = alloc_buf(;dimension=1, range_type=Float32, domain_type=Float32)
+    @test @inferred(hcubature(x -> cos(x[1]), (0.0f0,), (1.0f0,);buffer=buffer))[1] ≈ sin(1.0f0)
+    buffer = alloc_buf(;dimension=2, range_type=Float64, domain_type=Float64)
+    @test @inferred(hcubature(x -> 2, (0,0), (2pi, pi);buffer=buffer)[1]) ≈ 4pi^2
+    buffer = alloc_buf(;dimension=2, range_type=ComplexF64, domain_type=Float64)
+    @test @inferred(hcubature(x -> 2+im, (0,0), (2pi, pi);buffer=buffer))[1] ≈ 4pi^2 + im*2*pi^2
+end
