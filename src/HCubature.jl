@@ -57,10 +57,26 @@ Allocate a buffer that can be used in calls to [`hcubature`](@ref).
  buffer = hcubature_buffer(;dimension=2, range_type=ComplexF64, domain_type=Float64)
  I, E = hcubature(x -> 2+im, (0,0), (2pi, pi); buffer))
  ```
-
 """
-function hcubature_buffer(;dimension, domain_type=Float64, range_type=Float64, error_type=real(range_type))
-    return DataStructures.BinaryMaxHeap{Box{dimension,domain_type,range_type, error_type}}()
+function hcubature_buffer(f,a,b;norm=norm)
+    hcubature_buffer_(f,a,b,norm)
+end
+
+function hcubature_buffer_(f,a::SVector{N,T},b::SVector{N,T},norm) where {N,T}
+    rule = cubrule(Val{N}(), T)
+    I, E, _ = rule(f, a, b, norm)
+    firstbox = Box(a, b, I, E, 0)
+    DataStructures.BinaryMaxHeap{typeof(firstbox)}()
+end
+
+function hcubature_buffer_(f, a::AbstractVector{T}, b::AbstractVector{S},norm) where {T<:Real, S<:Real}
+    length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
+    F = float(promote_type(T, S))
+    return hcubature_buffer_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm)
+end
+
+function hcubature_buffer_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm) where {n}
+    hcubature_buffer_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm)
 end
 
 function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals, initdiv, buf) where {F, n, T<:Real}
@@ -195,12 +211,13 @@ returns a vector of integrands with different scalings.)
 
 In normal usage, `hcubature(...)` will allocate a buffer for internal
 computations. You can instead pass a preallocated buffer allocated using
-`hcubature_buffer' as the `buffer` argument. This buffer can be used across
+[`hcubature_buffer'](@ref) as the `buffer` argument. This buffer can be used across
 multiple calls to avoid repeated allocation.
 """
 hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
                    maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing) =
     hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, buffer)
+
 
 """
     hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)

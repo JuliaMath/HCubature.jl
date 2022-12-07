@@ -76,16 +76,27 @@ end
 end
 
 @testset "hcubature_buffer" begin
-    buffer = hcubature_buffer(;dimension=1)
-    @test @inferred(hcubature(x -> cos(x[1]), (0,), (1,);buffer=buffer))[1] ≈ sin(1) ≈
-    @inferred(hquadrature(cos, 0, 1; buffer=buffer))[1]
-    buffer = hcubature_buffer(;dimension=2)
-    @test hcubature(x -> cos(x[1])*cos(x[2]), [0,0], [1,1]; buffer=buffer)[1] ≈ sin(1)^2 ≈
-    @inferred(hcubature(x -> cos(x[1])*cos(x[2]), (0,0), (1,1);buffer=buffer))[1]
-    buffer = hcubature_buffer(;dimension=1, range_type=Float32, domain_type=Float32)
-    @test @inferred(hcubature(x -> cos(x[1]), (0.0f0,), (1.0f0,);buffer=buffer))[1] ≈ sin(1.0f0)
-    buffer = hcubature_buffer(;dimension=2, range_type=Float64, domain_type=Float64)
-    @test @inferred(hcubature(x -> 2, (0,0), (2pi, pi);buffer=buffer)[1]) ≈ 4pi^2
-    buffer = hcubature_buffer(;dimension=2, range_type=ComplexF64, domain_type=Float64)
-    @test @inferred(hcubature(x -> 2+im, (0,0), (2pi, pi);buffer=buffer))[1] ≈ 4pi^2 + im*2*pi^2
+    # 1d
+    f = x->cos(x[1])
+    a,b = (0,), (1,)
+    buffer = hcubature_buffer(f,a,b)
+    @test @inferred(hcubature(f,a,b;buffer=buffer))[1] ≈ sin(1) ≈
+    @inferred(hquadrature(f, 0, 1; buffer=buffer))[1]
+    # 2d
+    f = x -> cos(x[1])*cos(x[2])
+    a,b = [0,0], [1,1]
+    at,bt = (0,0), (1,1)
+    buffer = hcubature_buffer(f,a,b)
+    @test hcubature(f,a,b; buffer=buffer)[1] ≈ sin(1)^2 ≈
+    @inferred(hcubature(f, Tuple(a), Tuple(b);buffer=buffer))[1]
+    # 1d single precision
+    f = x -> cos(x[1])
+    a,b = (0.0f0,), (1.0f0,)
+    buffer = hcubature_buffer(f,a,b)
+    @test @inferred(hcubature(f,a,b;buffer=buffer))[1] ≈ sin(1.0f0)
+    # 2d complex entries
+    f = x -> (1+im)*cos(x[1])*cos(x[2])
+    a,b = (0,0), (1, 1)
+    buffer = hcubature_buffer(f,a,b)
+    @test @inferred(hcubature(f,a,b;buffer=buffer))[1] ≈ (1+im)*sin(1)^2
 end
