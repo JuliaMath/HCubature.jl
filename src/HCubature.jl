@@ -20,7 +20,7 @@ module HCubature
 using StaticArrays, LinearAlgebra
 import Combinatorics, DataStructures, QuadGK
 
-export hcubature, hquadrature, alloc_buf
+export hcubature, hquadrature, hcubature_buffer
 
 include("genz-malik.jl")
 include("gauss-kronrod.jl")
@@ -47,19 +47,19 @@ cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
 
 """
-    alloc_buf(;dimension[, domain_type, range_type, error_type])
+    hcubature_buffer(;dimension[, domain_type, range_type, error_type])
 
 Allocate a buffer that can be used in calls to [`hcubature`](@ref).
 
 # Examples:
 
 ```julia
- buffer = alloc_buf(;dimension=2, range_type=ComplexF64, domain_type=Float64)
+ buffer = hcubature_buffer(;dimension=2, range_type=ComplexF64, domain_type=Float64)
  I, E = hcubature(x -> 2+im, (0,0), (2pi, pi); buffer))
  ```
 
 """
-function alloc_buf(;dimension, domain_type=Float64, range_type=Float64, error_type=real(range_type))
+function hcubature_buffer(;dimension, domain_type=Float64, range_type=Float64, error_type=real(range_type))
     return DataStructures.BinaryMaxHeap{Box{dimension,domain_type,range_type, error_type}}()
 end
 
@@ -195,7 +195,7 @@ returns a vector of integrands with different scalings.)
 
 In normal usage, `hcubature(...)` will allocate a buffer for internal
 computations. You can instead pass a preallocated buffer allocated using
-`alloc_buf' as the `buffer` argument. This buffer can be used across
+`hcubature_buffer' as the `buffer` argument. This buffer can be used across
 multiple calls to avoid repeated allocation.
 """
 hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
