@@ -47,15 +47,17 @@ cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
 
 """
-    hcubature_buffer(;dimension[, domain_type, range_type, error_type])
+    hcubature_buffer(f,a,b;norm=norm)
 
 Allocate a buffer that can be used in calls to [`hcubature`](@ref).
 
 # Examples:
 
 ```julia
- buffer = hcubature_buffer(;dimension=2, range_type=ComplexF64, domain_type=Float64)
- I, E = hcubature(x -> 2+im, (0,0), (2pi, pi); buffer))
+f = x -> cos(x[1])*cos(x[2])
+a,b = (0,0), (1,1)
+buffer = hcubature_buffer(f,a,b)
+I,E = hcubature(f,a,b; buffer=buffer)
  ```
 """
 function hcubature_buffer(f,a,b;norm=norm)
