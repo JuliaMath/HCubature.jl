@@ -58,7 +58,7 @@ f = x -> cos(x[1])*cos(x[2])
 a,b = (0,0), (1,1)
 buffer = hcubature_buffer(f,a,b)
 I,E = hcubature(f,a,b; buffer=buffer)
- ```
+```
 """
 function hcubature_buffer(f,a,b;norm=norm)
     hcubature_buffer_(f,a,b,norm)
