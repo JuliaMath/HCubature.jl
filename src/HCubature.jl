@@ -20,7 +20,7 @@ module HCubature
 using StaticArrays, LinearAlgebra
 import Combinatorics, DataStructures, QuadGK
 
-export hcubature, hquadrature
+export hcubature, hquadrature, hcubature_buffer
 
 include("genz-malik.jl")
 include("gauss-kronrod.jl")
@@ -46,8 +46,57 @@ end
 cubrule(::Val{0}, ::Type{T}) where {T} = Trivial()
 countevals(::Trivial) = 1
 
-function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
-                    maxevals, initdiv) where {F, n, T<:Real}
+"""
+    hcubature_buffer(f,a,b;norm=norm)
+
+Allocate a buffer that can be used in calls to [`hcubature`](@ref). The
+arguments `(f,a,b;norm)` are the same as those passed to [`hcubature`](@ref).
+
+The resulting buffer can be re-used with different *values* of `a,b` and `f` as
+long as, the *type* of the enpoints `a,b` remains the same, and the *return
+type* of `f` does not change.
+
+Pre-allocating a buffer is only useful if you're going to be calling `hcubature`
+several times on *similar* arguments `f,a,b`, and if the cost of buffer
+allocation (and/or the associated garbage collection) is significant compared to
+the actual evaluation of the integral.
+
+# Examples:
+
+```julia
+f = x -> cos(x[1])*cos(x[2])
+a,b = (0,0), (1,1)
+buffer = hcubature_buffer(f,a,b)
+I,E = hcubature(f,a,b; buffer=buffer)
+
+# the buffer can be re-used on similar calls
+g = x -> sin(x[1])*sin(x[2])
+a,b = (0,0), (1.5,1.5)
+I,E = hcubature(g,a,b; buffer=buffer)
+```
+"""
+function hcubature_buffer(f,a,b;norm=norm)
+    hcubature_buffer_(f,a,b,norm)
+end
+
+function hcubature_buffer_(f,a::SVector{N,T},b::SVector{N,T},norm) where {N,T}
+    rule = cubrule(Val{N}(), T)
+    I, E, _ = rule(f, a, b, norm)
+    firstbox = Box(a, b, I, E, 0)
+    DataStructures.BinaryMaxHeap{typeof(firstbox)}()
+end
+
+function hcubature_buffer_(f, a::AbstractVector{T}, b::AbstractVector{S},norm) where {T<:Real, S<:Real}
+    length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
+    F = float(promote_type(T, S))
+    return hcubature_buffer_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm)
+end
+
+function hcubature_buffer_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm) where {n}
+    hcubature_buffer_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm)
+end
+
+function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals, initdiv, buf) where {F, n, T<:Real}
     rtol = rtol_ == 0 == atol ? sqrt(eps(T)) : rtol_
     (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
@@ -61,7 +110,8 @@ function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
     I, E, kdiv = rule(f, a,b1, norm)
     (n == 0 || iszero(prod(Δ))) && return I,E
     firstbox = Box(a,b1, I,E,kdiv)
-    boxes = DataStructures.BinaryMaxHeap{typeof(firstbox)}()
+    boxes = (buf===nothing) ? DataStructures.BinaryMaxHeap{typeof(firstbox)}() : (empty!(buf.valtree); buf)
+
     push!(boxes, firstbox)
 
     ma = MVector(a)
@@ -122,18 +172,19 @@ function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol,
     return I,E
 end
 
-function hcubature_(f::F, a::AbstractVector{T}, b::AbstractVector{S},
-                    norm, rtol, atol, maxevals, initdiv) where {F, T<:Real, S<:Real}
+function hcubature_(f, a::AbstractVector{T}, b::AbstractVector{S},
+                    norm, rtol, atol, maxevals, initdiv, buf) where {T<:Real, S<:Real}
     length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
-    U = float(promote_type(T, S))
-    return hcubature_(f, SVector{length(a),U}(a), SVector{length(a),U}(b), norm, rtol, atol, maxevals, initdiv)
+    F = float(promote_type(T, S))
+    return hcubature_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv, buf)
 end
-function hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv) where {n}
-    hcubature_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm, rtol, atol, maxevals, initdiv)
+function hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv, buf) where {n}
+    hcubature_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm, rtol, atol, maxevals, initdiv, buf)
 end
 
 """
-    hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
+    hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int),
+    initdiv=1, buffer=nothing)
 
 Compute the n-dimensional integral of f(x), where `n == length(a) == length(b)`,
 over the hypercube whose corners are given by the vectors (or tuples) `a` and `b`.
@@ -174,10 +225,16 @@ By default, the norm function used (for both this and the convergence
 test above) is `norm`, but you can pass an alternative norm by
 the `norm` keyword argument.  (This is especially useful when `f`
 returns a vector of integrands with different scalings.)
+
+In normal usage, `hcubature(...)` will allocate a buffer for internal
+computations. You can instead pass a preallocated buffer allocated using
+[`hcubature_buffer'](@ref) as the `buffer` argument. This buffer can be used across
+multiple calls to avoid repeated allocation.
 """
-hcubature(f::F, a, b; norm=norm, rtol::Real=0, atol::Real=0,
-          maxevals::Integer=typemax(Int), initdiv::Integer=1) where F =
-    hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv)
+hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
+                   maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing) =
+    hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, buffer)
+
 
 """
     hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
@@ -194,11 +251,10 @@ Alternatively, for 1d integrals you can import the [`QuadGK`](@ref) module
 and call the [`quadgk`](@ref) function, which provides additional flexibility
 e.g. in choosing the order of the quadrature rule.
 """
-function hquadrature(f::F, a::T, b::S; norm=norm, rtol::Real=0, atol::Real=0,
-                     maxevals::Integer=typemax(Int), initdiv::Integer=1) where
-                     {F, T<:Real, S<:Real}
-    U = float(promote_type(T, S))
-    hcubature_(x -> f(x[1]), SVector{1,U}(a), SVector{1,U}(b), norm, rtol, atol, maxevals, initdiv)
+function hquadrature(f, a::T, b::S; norm=norm, rtol::Real=0, atol::Real=0,
+                     maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing) where {T<:Real, S<:Real}
+    F = float(promote_type(T, S))
+    hcubature_(x -> f(x[1]), SVector{1,F}(a), SVector{1,F}(b), norm, rtol, atol, maxevals, initdiv, buffer)
 end
 
 end # module

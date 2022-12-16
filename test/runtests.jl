@@ -74,3 +74,28 @@ end
       @test hcubature(x -> x[2] < 0 ? NaN : x[1]*x[2], [-1, -1], [1, 1]) === (NaN, NaN)
       @test hcubature(x -> x[2] < 0 ? Inf : x[1]*x[2], [-1, -1], [1, 1]) === (Inf, NaN)
 end
+
+@testset "hcubature_buffer" begin
+    # 1d
+    f = x->cos(x[1])
+    a,b = (0,), (1,)
+    buffer = hcubature_buffer(f,a,b)
+    @test @inferred(hcubature(f,a,b;buffer=buffer))[1] ≈ sin(1) ≈
+    @inferred(hquadrature(f, 0, 1; buffer=buffer))[1]
+    # 2d
+    f = x -> cos(x[1])*cos(x[2])
+    a,b = [0,0], [1,1]
+    buffer = hcubature_buffer(f,a,b)
+    @test hcubature(f,a,b; buffer=buffer)[1] ≈ sin(1)^2 ≈
+    @inferred(hcubature(f, Tuple(a), Tuple(b);buffer=buffer))[1]
+    # 1d single precision
+    f = x -> cos(x[1])
+    a,b = (0.0f0,), (1.0f0,)
+    buffer = hcubature_buffer(f,a,b)
+    @test @inferred(hcubature(f,a,b;buffer=buffer))[1] ≈ sin(1.0f0)
+    # 2d complex entries
+    f = x -> (1+im)*cos(x[1])*cos(x[2])
+    a,b = (0,0), (1, 1)
+    buffer = hcubature_buffer(f,a,b)
+    @test @inferred(hcubature(f,a,b;buffer=buffer))[1] ≈ (1+im)*sin(1)^2
+end
