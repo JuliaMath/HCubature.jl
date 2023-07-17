@@ -16,6 +16,13 @@ can return any vector-like object (technically, any type supporting
 `+`, `-`, `*` real, and `norm`: a Banach space).  You can integrate
 real, complex, and matrix-valued integrands, for example.
 
+Note that HCubature assumes that your function `f(x)` can be computed at
+*arbitrary* points in the integration domain.   (This is the ideal
+way to do numerical integration.)  If you instead have `f(x)` precomputed
+at a fixed set of points, such as a Cartesian grid, you will need to
+use some other method (e.g. [Trapz.jl](https://github.com/francescoalemanno/Trapz.jl) for
+a multidimensional trapezoidal rule).
+
 ## Usage
 
 Assuming you've installed the HCubature package (via `Pkg.add`) and
