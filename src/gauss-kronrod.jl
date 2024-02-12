@@ -40,8 +40,7 @@ function (g::GaussKronrod{T})(f::F, a_::SVector{1}, b_::SVector{1}, norm=norm) w
             I′ += fx * g.wg[i>>1]
         end
     end
-    V = abs(Δ)
-    I *= V
-    I′ *= V
+    I *= Δ
+    I′ *= Δ
     return I, norm(I - I′), 1
 end
