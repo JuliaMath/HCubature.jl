@@ -115,7 +115,7 @@ to subdivide next.
 """
 function (g::GenzMalik{n,T})(f::F, a::SVector{n}, b::SVector{n}, norm=norm) where {F, n,T}
     c = T(0.5).*(a.+b)
-    Δ = T(0.5).*abs.(b.-a)
+    Δ = T(0.5).*(b.-a)
     V = prod(Δ)
 
     f₁ = f(c)
@@ -158,7 +158,7 @@ function (g::GenzMalik{n,T})(f::F, a::SVector{n}, b::SVector{n}, norm=norm) wher
         if (δ = divdiff[i] - maxdivdiff) > δf
             kdivide = i
             maxdivdiff = divdiff[i]
-        elseif abs(δ) <= δf && Δ[i] > Δ[kdivide]
+        elseif abs(δ) <= δf && abs(Δ[i]) > abs(Δ[kdivide])
             kdivide = i
         end
     end
