@@ -12,7 +12,7 @@ with k components equal to λ and other components equal to zero.
 function combos(k::Integer, λ::T, ::Val{n}) where {n, T<:Number}
     combos = Combinatorics.combinations(1:n, k)
     p = Vector{SVector{n,T}}(undef, length(combos))
-    v = MVector{n,T}(undef)
+    v = similar(SVector{n,T})
     for (i,c) in enumerate(combos)
         v .= 0
         v[c] .= λ
@@ -32,7 +32,7 @@ function signcombos(k::Integer, λ::T, ::Val{n}) where {n, T<:Number}
     combos = Combinatorics.combinations(1:n, k)
     twoᵏ = 1 << k
     p = Vector{SVector{n,T}}(undef, length(combos) * twoᵏ)
-    v = MVector{n,T}(undef)
+    v = similar(SVector{n,T})
     for (i,c) in enumerate(combos)
         j = (i-1)*twoᵏ + 1
         v .= 0
@@ -124,7 +124,7 @@ function (g::GenzMalik{n,T})(f::F, a::SVector{n}, b::SVector{n}, norm=norm) wher
     f₃ = zero(f₁)
     twelvef₁ = 12f₁
     maxdivdiff = zero(norm(f₁))
-    divdiff = MVector{n,typeof(maxdivdiff)}(undef)
+    divdiff = similar(SVector{n,typeof(maxdivdiff)})
     for i = 1:n
         p₂ = Δ .* g.p[1][i]
         f₂ᵢ = f(c + p₂) + f(c - p₂)

@@ -114,8 +114,8 @@ function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, m
 
     push!(boxes, firstbox)
 
-    ma = MVector(a)
-    mb = MVector(b)
+    ma = Base.copymutable(a)
+    mb = Base.copymutable(b)
 
     if initdiv > 1 # initial box divided by initdiv along each dimension
         skip = true # skip the first box, which we already added
