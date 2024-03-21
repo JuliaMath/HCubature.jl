@@ -103,7 +103,8 @@ function GenzMalik(v::Val{n}, ::Type{T}=Float64) where {n, T<:Real}
     return g
 end
 
-countevals(g::GenzMalik{n}) where {n} = 1 + 4n + 2*n*(n-1) + (1<<n)
+
+#countevals(g::GenzMalik{n}) where {n} = 1 + 4n + 2*n*(n-1) + (1<<n)
 
 """
     genzmalik(f, a, b, norm=norm)
@@ -149,6 +150,113 @@ function (g::GenzMalik{n,T})(f::F, a::SVector{n}, b::SVector{n}, norm=norm) wher
 
     I = V * (g.w[1]*f₁ + g.w[2]*f₂ + g.w[3]*f₃ + g.w[4]*f₄ + g.w[5]*f₅)
     I′ = V * (g.w′[1]*f₁ + g.w′[2]*f₂ + g.w′[3]*f₃ + g.w′[4]*f₄)
+    E = norm(I - I′)
+
+    # choose axis
+    kdivide = 1
+    δf = E / (10^n * V)
+    for i = 1:n
+        if (δ = divdiff[i] - maxdivdiff) > δf
+            kdivide = i
+            maxdivdiff = divdiff[i]
+        elseif abs(δ) <= δf && abs(Δ[i]) > abs(Δ[kdivide])
+            kdivide = i
+        end
+    end
+
+    return I, E, kdivide
+end
+
+
+struct GenzMalik_InPlace{n,T<:Real,Q}
+    p::NTuple{4,Vector{SVector{n,T}}} # points for the last 4 G-M weights
+    w::NTuple{5,T}  # weights for the 5 terms in the G-M rule
+    w′::NTuple{4,T} # weights for the embedded lower-degree rule
+
+    # internal variables
+    f₁::Q
+    f₂::Q
+    f₃::Q
+    twelvef₁::Q
+    f₂ᵢ::Q
+    f₃ᵢ::Q
+    f₄::Q
+    f₅::Q
+    t::Q
+end
+
+countevals(g::Union{GenzMalik_InPlace{n},GenzMalik{n}}) where {n} = 1 + 4n + 2*n*(n-1) + (1<<n)
+
+function GenzMalik_InPlace(v::Val{n}, ::Type{T}, r::Q) where {n, T<:Real, Q}
+    #haskey(gmcache, (n,T)) && return gmcache[n,T]::GenzMalik{n,T}
+
+    n < 2 && throw(ArgumentError("invalid dimension $n: GenzMalik rule requires dimension ≠ 2"))
+
+    λ₄ = sqrt(9/T(10))
+    λ₂ = sqrt(9/T(70))
+    λ₃ = λ₄
+    λ₅ = sqrt(9/T(19))
+
+    twoⁿ = 1 << n
+    w₁ = twoⁿ * ((12824 - 9120n + 400n^2) / T(19683))
+    w₂ = twoⁿ * (980 / T(6561))
+    w₃ = twoⁿ * ((1820 - 400n) / T(19683))
+    w₄ = twoⁿ * (200 / T(19683))
+    w₅ = 6859/T(19683)
+    w₄′ = twoⁿ * (25/T(729))
+    w₃′ = twoⁿ * ((265 - 100n)/T(1458))
+    w₂′ = twoⁿ * (245/T(486))
+    w₁′ = twoⁿ * ((729 - 950n + 50n^2)/T(729))
+
+    p₂ = combos(1, λ₂, v)
+    p₃ = combos(1, λ₃, v)
+    p₄ = signcombos(2, λ₄, v)
+    p₅ = signcombos(n, λ₅, v)
+
+    g = GenzMalik_InPlace{n,T,Q}((p₂,p₃,p₄,p₅), (w₁,w₂,w₃,w₄,w₅), (w₁′,w₂′,w₃′,w₄′),
+                          similar(r), similar(r), similar(r), similar(r),
+                          similar(r), similar(r), similar(r), similar(r),
+                          similar(r))
+    #gmcache[n,T] = g
+    return g
+end
+
+
+function (g::GenzMalik_InPlace{n,T,Q})(f!::F, a::SVector{n}, b::SVector{n}, norm=norm) where {F, n,T,Q}
+    c = T(0.5).*(a.+b)
+    Δ = T(0.5).*(b.-a)
+    V = prod(Δ)
+
+    f!(g.f₁, c)
+    fill!(g.f₂, 0)
+    fill!(g.f₃, 0)
+    g.twelvef₁ .= 12g.f₁
+    maxdivdiff = zero(norm(g.f₁))
+    divdiff = similar(SVector{n,typeof(maxdivdiff)})
+    for i = 1:n
+        p₂ = Δ .* g.p[1][i]
+        f!(g.f₂ᵢ, c + p₂); f!(g.t, c - p₂); g.f₂ᵢ .+= g.t
+        p₃ = Δ .* g.p[2][i]
+        f!(g.f₃ᵢ, c + p₃); f!(g.t, c - p₃); g.f₃ᵢ .+= g.t
+        g.f₂ .+= g.f₂ᵢ
+        g.f₃ .+= g.f₃ᵢ
+        # fourth divided difference: f₃ᵢ-2f₁ - 7*(f₂ᵢ-2f₁),
+        # where 7 = (λ₃/λ₂)^2 [see van Dooren and de Ridder]
+        divdiff[i] = norm(g.f₃ᵢ + g.twelvef₁ - 7*g.f₂ᵢ)
+    end
+
+    fill!(g.f₄, 0)
+    for p in g.p[3]
+        f!(g.t, c .+ Δ .* p); g.f₄ .+= g.t
+    end
+
+    fill!(g.f₅, 0)
+    for p in g.p[4]
+        f!(g.t, c .+ Δ .* p); g.f₅ .+= g.t
+    end
+
+    I = V * (g.w[1]*g.f₁ + g.w[2]*g.f₂ + g.w[3]*g.f₃ + g.w[4]*g.f₄ + g.w[5]*g.f₅)
+    I′ = V * (g.w′[1]*g.f₁ + g.w′[2]*g.f₂ + g.w′[3]*g.f₃ + g.w′[4]*g.f₄)
     E = norm(I - I′)
 
     # choose axis

@@ -110,3 +110,12 @@ end
     @test hquadrature(x -> exp(-x^2), T(0), T(1); rtol = 1e-20)[1] ≈ 0.7468241328124270254
     @test hcubature(x -> exp(-x[1]^2), T.((0,0)), T.((1,1)); rtol = 1e-20)[1] ≈ 0.7468241328124270254
 end
+
+@testset "in place" begin
+    f(x) = [cos(x[1]) sin(x[2]); cos(x[1])^2 cos(x[2])^2]
+    f!(r, x) = r .= f(x)
+    result = zeros(2, 2)
+    I₁ = hcubature(f, (-1,0), (1,1))[1]
+    I₂ = hcubature!(result, f!, (-1,0), (1,1))[1]
+    @test I₁ ≈ I₂
+end
