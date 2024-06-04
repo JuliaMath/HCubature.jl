@@ -99,3 +99,14 @@ end
     buffer = hcubature_buffer(f,a,b)
     @test @inferred(hcubature(f,a,b;buffer=buffer))[1] ≈ (1+im)*sin(1)^2
 end
+
+@testset "issue 23" begin
+    @test hquadrature(x -> 1.0, 1, -1)[1] ≈ -2
+    @test hcubature(x -> 1.0, [-1,1], [1,-1])[1] ≈ -4
+end
+
+@testset "issue 60" begin
+    T = BigFloat
+    @test hquadrature(x -> exp(-x^2), T(0), T(1); rtol = 1e-20)[1] ≈ 0.7468241328124270254
+    @test hcubature(x -> exp(-x[1]^2), T.((0,0)), T.((1,1)); rtol = 1e-20)[1] ≈ 0.7468241328124270254
+end
