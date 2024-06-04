@@ -20,7 +20,7 @@ module HCubature
 using StaticArrays, LinearAlgebra
 import Combinatorics, DataStructures, QuadGK
 
-export hcubature, hquadrature, hcubature_buffer
+export hcubature, hcubature!, hquadrature, hcubature_buffer
 
 include("genz-malik.jl")
 include("gauss-kronrod.jl")
@@ -35,6 +35,7 @@ end
 Base.isless(i::Box, j::Box) = isless(i.E, j.E)
 
 cubrule(v::Val{n}, ::Type{T}) where {n,T} = GenzMalik(v, T)
+cubrule(v::Val{n}, ::Type{T}, r::Q) where {n,T,Q} = GenzMalik_InPlace(v, T, r)
 cubrule(::Val{1}, ::Type{T}) where {T} = GaussKronrod(T)
 
 # trivial rule for 0-dimensional integrals
@@ -96,13 +97,13 @@ function hcubature_buffer_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}
     hcubature_buffer_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm)
 end
 
-function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals, initdiv, buf) where {F, n, T<:Real}
+function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals, initdiv, buf, rule) where {F, n, T<:Real}
     rtol = rtol_ == 0 == atol ? sqrt(eps(T)) : rtol_
     (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
     initdiv < 1 && throw(ArgumentError("initdiv must be positive"))
 
-    rule = cubrule(Val{n}(), T)
+    #rule = cubrule(Val{n}(), T)
     numevals = evals_per_box = countevals(rule)
 
     Δ = (b-a) / initdiv
@@ -176,11 +177,33 @@ function hcubature_(f, a::AbstractVector{T}, b::AbstractVector{S},
                     norm, rtol, atol, maxevals, initdiv, buf) where {T<:Real, S<:Real}
     length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
     F = float(promote_type(T, S))
-    return hcubature_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv, buf)
+    rule = cubrule(Val{length(a)}(), F)
+    return hcubature_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv, buf, rule)
 end
 function hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv, buf) where {n}
-    hcubature_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm, rtol, atol, maxevals, initdiv, buf)
+    sa = SVector{n}(float.(a))
+    sb = SVector{n}(float.(b))
+    rule = cubrule(Val{length(sa)}(), eltype(sa))
+    hcubature_(f, sa, sb, norm, rtol, atol, maxevals, initdiv, buf, rule)
 end
+
+
+function hcubature_(result::Q, f!, a::AbstractVector{T}, b::AbstractVector{S},
+                    norm, rtol, atol, maxevals, initdiv, buf) where {Q, T<:Real, S<:Real}
+    length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
+    F = float(promote_type(T, S))
+    rule = cubrule(Val(length(a)), F, result)
+    return hcubature_(f!, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv, buf, rule)
+end
+function hcubature_(result::Q, f!, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv, buf) where {n, Q}
+    sa = SVector{n}(float.(a))
+    sb = SVector{n}(float.(b))
+    rule = cubrule(Val(length(sa)), eltype(sa), result)
+    hcubature_(f!, sa, sb, norm, rtol, atol, maxevals, initdiv, buf, rule)
+end
+
+
+
 
 """
     hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int),
@@ -234,6 +257,14 @@ multiple calls to avoid repeated allocation.
 hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
                    maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing) =
     hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, buffer)
+
+
+function hcubature!(result, f!, a, b; norm=norm, rtol::Real=0, atol::Real=0,
+                    maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing)
+    (I, E) = hcubature_(result, f!, a, b, norm, rtol, atol, maxevals, initdiv, buffer)
+    result .= I
+    return I, E
+end
 
 
 """
