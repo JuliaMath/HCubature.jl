@@ -7,14 +7,9 @@ struct GaussKronrod{T<:Real}
     wg::Vector{T}
 end
 
-# cache the Gauss-Kronrod rules so that we don't
-# call QuadGK.kronrod every time.
-const gkcache = Dict{Type, GaussKronrod}()
-
 function GaussKronrod(::Type{T}) where {T<:Real}
-    haskey(gkcache, T) && return gkcache[T]::GaussKronrod{T}
-    gkcache[T] = g = GaussKronrod{T}(QuadGK.kronrod(T,7)...)
-    return g
+    # use QuadGK's internal rule cache
+    return GaussKronrod{T}(QuadGK.cachedrule(T, 7)...)
 end
 
 # further speed up the common case of double precision (25% faster for a trivial integrand)
