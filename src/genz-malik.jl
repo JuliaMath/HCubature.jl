@@ -65,16 +65,11 @@ end
 # cache the Genz-Malik rules so that we don't reconstruct them every time;
 # this mainly matters for simple integrands (low-degree polynomials) that
 # don't require refinement.
-const gmcache = Dict{Tuple{Int,Type}, GenzMalik}()
+const gmcache = Dict{Tuple{Int,Type,Int}, GenzMalik}()
+const gmcache_lock = ReentrantLock() # thread-safety
 
-"""
-    GenzMalik(Val{n}(), T=Float64)
-
-Construct an n-dimensional Genz-Malik rule for coordinates of type `T`.
-"""
-function GenzMalik(v::Val{n}, ::Type{T}=Float64) where {n, T<:Real}
-    haskey(gmcache, (n,T)) && return gmcache[n,T]::GenzMalik{n,T}
-
+# internal code to construct n-dimensional Genz-Malik rule for coordinates of type `T`.
+function _GenzMalik(v::Val{n}, ::Type{T}) where {n, T<:Real}
     n < 2 && throw(ArgumentError("invalid dimension $n: GenzMalik rule requires dimension > 2"))
 
     λ₄ = sqrt(9/T(10))
@@ -98,10 +93,32 @@ function GenzMalik(v::Val{n}, ::Type{T}=Float64) where {n, T<:Real}
     p₄ = signcombos(2, λ₄, v)
     p₅ = signcombos(n, λ₅, v)
 
-    g = GenzMalik{n,T}((p₂,p₃,p₄,p₅), (w₁,w₂,w₃,w₄,w₅), (w₁′,w₂′,w₃′,w₄′))
-    gmcache[n,T] = g
-    return g
+    return GenzMalik{n,T}((p₂,p₃,p₄,p₅), (w₁,w₂,w₃,w₄,w₅), (w₁′,w₂′,w₃′,w₄′))
 end
+
+"""
+    GenzMalik(Val{n}(), T=Float64)
+
+Construct an n-dimensional Genz-Malik rule for coordinates of type `T`.
+"""
+function GenzMalik(v::Val{n}, ::Type{T}=Float64) where {n, T<:Real}
+    lock(gmcache_lock)
+    try
+        p = precision(T)
+        haskey(gmcache, (n,T,p)) && return gmcache[n,T,p]::GenzMalik{n,T}
+        return gmcache[n,T,p] = _GenzMalik(v, T)
+    finally
+        unlock(gmcache_lock)
+    end
+end
+
+# speed up common low-dimensional Float64 case:
+for n in 2:4
+    gm = Symbol(:_gm, n)
+    @eval const $gm = _GenzMalik(Val($n), Float64)
+    @eval GenzMalik(::Val{$n}, ::Type{Float64}) = $gm
+end
+
 
 countevals(g::GenzMalik{n}) where {n} = 1 + 4n + 2*n*(n-1) + (1<<n)
 

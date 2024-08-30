@@ -3,13 +3,18 @@ using Test
 
 @testset "simple" begin
       @test hcubature(x -> cos(x[1])*cos(x[2]), [0,0], [1,1])[1] ≈ sin(1)^2 ≈
-            @inferred(hcubature(x -> cos(x[1])*cos(x[2]), (0,0), (1,1)))[1]
+            @inferred(hcubature(x -> cos(x[1])*cos(x[2]), (0,0), (1,1)))[1] ≈
+            @inferred(hcubature(x -> cos(x[1])*cos(x[2]), (0.0f0,0.0f0), (1.0f0,1.0f0)))[1]
       @test @inferred(hcubature(x -> cos(x[1]), (0,), (1,)))[1] ≈ sin(1) ≈
             @inferred(hquadrature(cos, 0, 1))[1]
       @test @inferred(hcubature(x -> cos(x[1]), (0.0f0,), (1.0f0,)))[1] ≈ sin(1.0f0)
       @test @inferred(hcubature(x -> 1.7, SVector{0,Float64}(), SVector{0,Float64}()))[1] == 1.7
       @test @inferred(hcubature(x -> 2, (0,0), (2pi, pi))[1]) ≈ 4pi^2
+      @test @inferred(hcubature(x -> 2, (0.0f0,0.0f0), (2.0f0*pi, 1.0f0*pi))[1]) ≈ 4pi^2
       @test_throws DimensionMismatch hcubature(x -> 2, [0,0,0], [2,0])
+      for d in 1:5
+            @test hcubature(x -> 1, fill(0,d), fill(1,d))[1] ≈ 1 rtol=1e-13
+      end
 end
 
 # function wrapper for counting evaluations
