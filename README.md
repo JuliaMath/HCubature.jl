@@ -4,7 +4,9 @@ The HCubature module is a pure-Julia implementation of
 multidimensional "h-adaptive" integration.  That is, given
 an n-dimensional integral
 
-![n-dimensional integral](integral.png)
+```math
+\int_{a_1}^{b_1} \int_{a_2}^{b_2} \cdots \int_{a_n}^{b_n} f(\vec{x})\,\mathrm{d}^n\vec{x}
+```
 
 then `hcubature(f, a, b)` computes the integral, adaptively subdividing
 the integration volume into smaller and smaller pieces until convergence
