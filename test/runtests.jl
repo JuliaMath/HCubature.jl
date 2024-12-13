@@ -22,7 +22,7 @@ end
       let io = IOBuffer()
             # Capture println's in a buffer, ensure one line per integrand function eval
             (i, e, count) = hcubature_print(io, x -> 2, (0,0), (2pi, pi))
-            regex = r"y\((?<x>.+?)\) = (?<y>.+?)"
+            regex = r"f\((?<x>.+?)\) = (?<y>.+?)"
             io_lines = collect(eachmatch(regex, String(take!(io))))
             @test length(io_lines) == count
       end
