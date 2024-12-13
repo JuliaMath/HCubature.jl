@@ -15,6 +15,17 @@ using Test
       for d in 1:5
             @test hcubature(x -> 1, fill(0,d), fill(1,d))[1] ≈ 1 rtol=1e-13
       end
+      @test @inferred(hcubature_count(x -> 2, (0,0), (2pi, pi))[1]) ≈ 4pi^2
+end
+
+@testset "print" begin
+      let io = IOBuffer()
+            # Capture println's in a buffer, ensure one line per integrand function eval
+            (i, e, count) = hcubature_print(io, x -> 2, (0,0), (2pi, pi))
+            regex = r"y\((?<x>.+?)\) = (?<y>.+?)"
+            io_lines = collect(eachmatch(regex, String(take!(io))))
+            @test length(io_lines) == count
+      end
 end
 
 # function wrapper for counting evaluations
