@@ -20,7 +20,7 @@ module HCubature
 using StaticArrays, LinearAlgebra
 import Combinatorics, DataStructures, QuadGK
 
-export hcubature, hquadrature, hcubature_buffer
+export hcubature, hquadrature, hcubature_buffer, hcubature_count, hcubature_print
 
 include("genz-malik.jl")
 include("gauss-kronrod.jl")
