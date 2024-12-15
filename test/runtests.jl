@@ -18,7 +18,7 @@ using Test
 end
 
 @testset "count" begin
-      (i, e, count) = hcubature_count(x -> 2, (0,0), (2pi, pi))[1]
+      (i, e, count) = hcubature_count(x -> 2, (0,0), (2pi, pi))
       @test i ≈ 4pi^2
       @test count == HCubature.countevals(HCubature.GenzMalik(Val(2)))
 end
