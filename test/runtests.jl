@@ -33,8 +33,10 @@ end
             @test length(io_lines) == count
       end
 
-      # Test wrapper without io specified
-      (i, e, count) = hcubature_print(x -> 2, (0,0), (2pi, pi));
+      # Test hcubature_print(f, a, b) without io arg specified
+      # Suppress output of internal printing to stdout
+      f() = hcubature_print(x -> 2, (0,0), (2pi, pi))
+      (i, e, count) = redirect_stdout(f, devnull);
       @test i ≈ 4pi^2
 end
 
