@@ -15,7 +15,12 @@ using Test
       for d in 1:5
             @test hcubature(x -> 1, fill(0,d), fill(1,d))[1] ≈ 1 rtol=1e-13
       end
-      @test hcubature_count(x -> 2, (0,0), (2pi, pi))[1] ≈ 4pi^2
+end
+
+@testset "count" begin
+      (i, e, count) = hcubature_count(x -> 2, (0,0), (2pi, pi))[1]
+      @test i ≈ 4pi^2
+      @test count == HCubature.countevals(HCubature.GenzMalik(Val(2)))
 end
 
 @testset "print" begin
