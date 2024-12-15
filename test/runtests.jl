@@ -38,6 +38,7 @@ end
       f() = hcubature_print(x -> 2, (0,0), (2pi, pi))
       (i, e, count) = redirect_stdout(f, devnull);
       @test i ≈ 4pi^2
+      @test count == HCubature.countevals(HCubature.GenzMalik(Val(2)))
 end
 
 # function wrapper for counting evaluations
