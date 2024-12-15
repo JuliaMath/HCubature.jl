@@ -24,13 +24,18 @@ end
 end
 
 @testset "print" begin
+      # Capture println's in a buffer, ensure one printed line per integrand eval
       let io = IOBuffer()
-            # Capture println's in a buffer, ensure one line per integrand function eval
             (i, e, count) = hcubature_print(io, x -> 2, (0,0), (2pi, pi))
             regex = r"f\((?<x>.+?)\) = (?<y>.+?)"
             io_lines = collect(eachmatch(regex, String(take!(io))))
+            @test i ≈ 4pi^2
             @test length(io_lines) == count
       end
+
+      # Test wrapper without io specified
+      (i, e, count) = hcubature_print(x -> 2, (0,0), (2pi, pi));
+      @test i ≈ 4pi^2
 end
 
 # function wrapper for counting evaluations
