@@ -20,7 +20,7 @@ module HCubature
 using StaticArrays, LinearAlgebra
 import Combinatorics, DataStructures, QuadGK
 
-export hcubature, hquadrature, hcubature_buffer
+export hcubature, hquadrature, hcubature_buffer, hcubature_count, hcubature_print
 
 include("genz-malik.jl")
 include("gauss-kronrod.jl")
@@ -235,6 +235,51 @@ hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
                    maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing) =
     hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, buffer)
 
+
+"""
+    hcubature_count(f, a, b; kws...)
+
+Identical to [`hcubature`](@ref) but returns a triple `(I, E, count)`
+of the estimated integral `I`, the estimated error bound `E`, and a `count`
+of the number of times the integrand `f` was evaluated.
+
+The count of integrand evaluations is a useful performance metric: a large
+number typically indicates a badly behaved integrand (with singularities,
+discontinuities, sharp peaks, and/or rapid oscillations), in which case
+it may be possible to mathematically transform the problem in some way
+to improve the convergence rate.
+"""
+function hcubature_count(f, a, b; kws...)
+    count = Ref(0)
+    I, E = hcubature(a, b; kws...) do x
+        count[] += 1
+        f(x)
+    end
+    return (I, E, count[])
+end
+
+"""
+    hcubature_print([io], f, a, b; kws...)
+
+Identical to [`hcubature`](@ref), but **prints** each integrand
+evaluation to the stream `io` (defaults to `stdout`) in the form:
+```
+f(x1) = y1
+f(x2) = y2
+...
+```
+which is useful for pedagogy and debugging.
+
+Also, like [`hcubature_count`](@ref), it returns a triple `(I, E, count)`
+of the estimated integral `I`, the estimated error bound `E`, and a `count`
+of the number of times the integrand `f` was evaluated.
+"""
+hcubature_print(io::IO, f, a, b; kws...) = hcubature_count(a, b; kws...) do x
+    y = f(x)
+    println(io, "f($x) = $y")
+    y
+end
+hcubature_print(f, a, b; kws...) = hcubature_print(stdout, f, a, b; kws...)
 
 """
     hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)

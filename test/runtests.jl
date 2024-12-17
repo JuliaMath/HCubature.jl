@@ -17,6 +17,30 @@ using Test
       end
 end
 
+@testset "count" begin
+      (i, e, count) = hcubature_count(x -> 2, (0,0), (2pi, pi))
+      @test i ≈ 4pi^2
+      @test count == HCubature.countevals(HCubature.GenzMalik(Val(2)))
+end
+
+@testset "print" begin
+      # Capture println's in a buffer, ensure one printed line per integrand eval
+      let io = IOBuffer()
+            (i, e, count) = hcubature_print(io, x -> 2, (0,0), (2pi, pi))
+            regex = r"f\((?<x>.+?)\) = (?<y>.+?)"
+            io_lines = collect(eachmatch(regex, String(take!(io))))
+            @test i ≈ 4pi^2
+            @test length(io_lines) == count
+      end
+
+      # Test hcubature_print(f, a, b) without io arg specified
+      # Suppress output of internal printing to stdout
+      f() = hcubature_print(x -> 2, (0,0), (2pi, pi))
+      (i, e, count) = redirect_stdout(f, devnull);
+      @test i ≈ 4pi^2
+      @test count == HCubature.countevals(HCubature.GenzMalik(Val(2)))
+end
+
 # function wrapper for counting evaluations
 const gcnt = Ref(0)
 cnt(f) = x -> begin
