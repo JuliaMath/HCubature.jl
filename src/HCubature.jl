@@ -20,7 +20,7 @@ module HCubature
 using StaticArrays, LinearAlgebra
 import Combinatorics, DataStructures, QuadGK
 
-export hcubature, hquadrature, hcubature_buffer, hcubature_count, hcubature_print
+export hcubature, hquadrature, hcubature_buffer, hcubature_count, hcubature_print, hcubature_evalbuffer, hcubature_evalbuffer_count, hcubature_evalbuffer_print
 
 include("genz-malik.jl")
 include("gauss-kronrod.jl")
@@ -33,6 +33,12 @@ struct Box{n,T<:Real,TI,TE<:Real}
     kdiv::Int
 end
 Base.isless(i::Box, j::Box) = isless(i.E, j.E)
+
+struct ReturnEvalBuffer{
+  S<:Union{Nothing,<:DataStructures.BinaryMaxHeap{<:Box}}}
+
+  buf::S # either a pre-allocateed partition buffer or nothing
+end
 
 cubrule(v::Val{n}, ::Type{T}) where {n,T} = GenzMalik(v, T)
 cubrule(::Val{1}, ::Type{T}) where {T} = GaussKronrod(T)
@@ -96,7 +102,14 @@ function hcubature_buffer_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}
     hcubature_buffer_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm)
 end
 
-function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, maxevals, initdiv, buf) where {F, n, T<:Real}
+function hcubature_(
+  f::F, a::SVector{n,T}, b::SVector{n,T}, 
+  norm, rtol_, atol, maxevals, initdiv, 
+  _buf::Union{Nothing,<:DataStructures.BinaryMaxHeap{<:Box},ReturnEvalBuffer}
+  ) where {F, n, T<:Real}
+
+    buf = _buf isa ReturnEvalBuffer ? _buf.buf : _buf
+
     rtol = rtol_ == 0 == atol ? sqrt(eps(T)) : rtol_
     (rtol < 0 || atol < 0) && throw(ArgumentError("invalid negative tolerance"))
     maxevals < 0 && throw(ArgumentError("invalid negative maxevals"))
@@ -169,7 +182,8 @@ function hcubature_(f::F, a::SVector{n,T}, b::SVector{n,T}, norm, rtol_, atol, m
         I += boxes.valtree[i].I
         E += boxes.valtree[i].E
     end
-    return I,E
+
+    return _buf isa ReturnEvalBuffer ? (I, E, boxes) : (I, E)
 end
 
 function hcubature_(f, a::AbstractVector{T}, b::AbstractVector{S},
@@ -235,6 +249,8 @@ hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
                    maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing) =
     hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, buffer)
 
+hcubature_evalbuffer(args...; buffer=nothing, kws...) =
+  hcubature(args...; buffer=ReturnEvalBuffer(buffer), kws...)
 
 """
     hcubature_count(f, a, b; kws...)
@@ -251,12 +267,15 @@ to improve the convergence rate.
 """
 function hcubature_count(f, a, b; kws...)
     count = Ref(0)
-    I, E = hcubature(a, b; kws...) do x
+    res = hcubature(a, b; kws...) do x
         count[] += 1
         f(x)
     end
-    return (I, E, count[])
+    return (res..., count[])
 end
+
+hcubature_evalbuffer_count(args...; buffer=nothing, kws...) = 
+  hcubature_count(args...; buffer=ReturnEvalBuffer(buffer), kws...)
 
 """
     hcubature_print([io], f, a, b; kws...)
@@ -280,6 +299,9 @@ hcubature_print(io::IO, f, a, b; kws...) = hcubature_count(a, b; kws...) do x
     y
 end
 hcubature_print(f, a, b; kws...) = hcubature_print(stdout, f, a, b; kws...)
+
+hcubature_evalbuffer_print(args...; buffer=nothing, kws...) =
+  hcubature_print(args...; buffer=ReturnEvalBuffer(buffer), kws...)
 
 """
     hquadrature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int), initdiv=1)
