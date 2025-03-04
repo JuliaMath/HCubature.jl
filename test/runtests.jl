@@ -166,7 +166,7 @@ hcubature_return_evalbuf_printnull(args...; kws...) = hcubature_return_evalbuf_p
   hcubature(x -> sin(x[1] + x[2]), [0.0,0.0], [1.0,1.0], buffer=buf2, maxevals=0)
   @test buf2.valtree == [HCubature.Box(SVector((0.0,0.0)), SVector(1.0,1.0), I2, E2, only(buf2.valtree).kdiv)]
 
-  I2, E3, count3 =  hcubature_count(osc, [0.0,0.0], [1.0,1.0], buffer=buf2, eval_buffer=buf, maxevals=0)
+  I3, E3, count3 =  hcubature_count(osc, [0.0,0.0], [1.0,1.0], buffer=buf2, eval_buffer=buf, maxevals=0)
   @test buf2.valtree == buf.valtree && buf2 !== buf
   @test I ≈ I3 rtol=1e-15
   @test E ≈ E3 rtol=1e-15
