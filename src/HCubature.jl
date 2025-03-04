@@ -234,55 +234,70 @@ end
     hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int),
     initdiv=1, buffer=nothing, eval_buffer=nothing)
 
-Compute the n-dimensional integral of f(x), where `n == length(a) == length(b)`,
-over the hypercube whose corners are given by the vectors (or tuples) `a` and `b`.
-That is, dimension `x[i]` is integrated from `a[i]` to `b[i]`.  The
-return value of `hcubature` is a tuple `(I, E)` of the estimated integral
-`I` and an estimated error `E`.
+Compute the n-dimensional integral of f(x), where `n == length(a) ==
+length(b)`, over the hypercube whose corners are given by the vectors (or
+tuples) `a` and `b`. That is, dimension `x[i]` is integrated from `a[i]` to
+`b[i]`.  The return value of `hcubature` is a tuple `(I, E)` of the estimated
+integral `I` and an estimated error `E`.
 
-`f` should be a function `f(x)` that takes an n-dimensional vector `x`
-and returns the integrand at `x`.   The integrand can be any type that supports
-`+`, `-`, `*` real, and `norm` functions.  For example, the integrand
-can be real or complex numbers, vectors, matrices, etcetera.
+`f` should be a function `f(x)` that takes an n-dimensional vector `x` and
+returns the integrand at `x`.   The integrand can be any type that supports
+`+`, `-`, `*` real, and `norm` functions.  For example, the integrand can be
+real or complex numbers, vectors, matrices, etcetera.
 
-The integrand `f(x)` will be always be passed an `SVector{n,T}`,
-where `SVector` is an efficient vector type defined in the `StaticArrays`
-package and `T` is a floating-point type determined by promoting
-the endpoint `a` and `b` coordinates to a floating-point type.
-(Your integrand `f` should be type-stable: it should always return
-a value of the same type, given this type of `x`.)
+The integrand `f(x)` will be always be passed an `SVector{n,T}`, where
+`SVector` is an efficient vector type defined in the `StaticArrays` package and
+`T` is a floating-point type determined by promoting the endpoint `a` and `b`
+coordinates to a floating-point type. (Your integrand `f` should be
+type-stable: it should always return a value of the same type, given this type
+of `x`.)
 
 The integrand will never be evaluated exactly at the boundaries of the
-integration volume.  (So, for example, it is possible to have an
-integrand that blows up at the boundaries, as long as the integral
-is finite, though such singularities will slow convergence.)
+integration volume.  (So, for example, it is possible to have an integrand that
+blows up at the boundaries, as long as the integral is finite, though such
+singularities will slow convergence.)
 
-The integration volume is adaptively subdivided, using a cubature
-rule due to Genz and Malik (1980), until the estimated error `E`
-satisfies `E ≤ max(rtol*norm(I), atol)`, i.e. `rtol` and `atol` are
-the relative and absolute tolerances requested, respectively.
-It also stops if the number of `f` evaluations exceeds `maxevals`.
-If neither `atol` nor `rtol` are specified, the
-default `rtol` is the square root of the precision `eps(T)`
-of the coordinate type `T` described above.
-Initially, the volume is divided into `initdiv` segments along each dimension.
+The integration volume is adaptively subdivided, using a cubature rule due to
+Genz and Malik (1980), until the estimated error `E` satisfies `E ≤
+max(rtol*norm(I), atol)`, i.e. `rtol` and `atol` are the relative and absolute
+tolerances requested, respectively. It also stops if the number of `f`
+evaluations exceeds `maxevals`. If neither `atol` nor `rtol` are specified, the
+default `rtol` is the square root of the precision `eps(T)` of the coordinate
+type `T` described above. Initially, the volume is divided into `initdiv`
+segments along each dimension.
 
 The error is estimated by `norm(I - I′)`, where `I′` is an alternative
-estimated integral (via an "embedded" lower-order cubature rule.)
-By default, the norm function used (for both this and the convergence
-test above) is `norm`, but you can pass an alternative norm by
-the `norm` keyword argument.  (This is especially useful when `f`
-returns a vector of integrands with different scalings.)
+estimated integral (via an "embedded" lower-order cubature rule.) By default,
+the norm function used (for both this and the convergence test above) is
+`norm`, but you can pass an alternative norm by the `norm` keyword argument.
+(This is especially useful when `f` returns a vector of integrands with
+different scalings.)
 
 In normal usage, `hcubature(...)` will allocate a buffer for internal
 computations. You can instead pass a preallocated buffer allocated using
-[`hcubature_buffer'](@ref) as the `buffer` argument. This buffer can be used across
-multiple calls to avoid repeated allocation.
+[`hcubature_buffer'](@ref) as the `buffer` argument. This buffer can be used
+across multiple calls to avoid repeated allocation.
+
+An existing partition of the domain can be reused by passing to `eval_buffer`
+kwarg, which then is used as the starting partition for the adaptive
+quadrature. Note that in such a case, `initdiv` is ignored and checks are not
+performed to make sure that the partition is non-overlapping and covers the
+domain of interest.  
 """
 hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
                    maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing, eval_buffer=nothing) =
     hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, buffer, eval_buffer)
 
+"""
+    hcubature_return_evalbuf(f, a, b; kws...)
+
+Identical to [`hcubature`](@ref) but returns a triple `(I, E, buffer)` of 
+the estimated integral `I`, the estimated error bound `E`, and the partition
+`buffer` achieved during the integration process.
+
+The returned `buffer` can be reused through `eval_buffer` kwarg as the starting
+partition for the adaptive quadrature.
+"""
 hcubature_return_evalbuf(args...; buffer=nothing, kws...) =
   hcubature(args...; buffer=ReturnEvalBuffer(buffer), kws...)
 
@@ -308,6 +323,14 @@ function hcubature_count(f, a, b; kws...)
     return (res..., count[])
 end
 
+"""
+    hcubature_return_evalbuf_count(f, a, b; kws...)
+
+Identical to [`hcubature_return_evalbuf`](@ref) but returns `(I, E, buffer,
+count)` of the estimated integral `I`, the estimated error bound `E`, the
+partition `buffer` achieved during the integration process and a `count` of the
+number of times the integrand `f` was evaluated.
+"""
 hcubature_return_evalbuf_count(args...; buffer=nothing, kws...) = 
   hcubature_count(args...; buffer=ReturnEvalBuffer(buffer), kws...)
 
@@ -334,6 +357,23 @@ hcubature_print(io::IO, f, a, b; kws...) = hcubature_count(a, b; kws...) do x
 end
 hcubature_print(f, a, b; kws...) = hcubature_print(stdout, f, a, b; kws...)
 
+"""
+    hcubature_return_evalbuf_print([io], f, a, b; kws...)
+
+Identical to [`hcubature_return_evalbuf`](@ref), but **prints** each integrand
+evaluation to the stream `io` (defaults to `stdout`) in the form:
+```
+f(x1) = y1
+f(x2) = y2
+...
+```
+which is useful for pedagogy and debugging.
+
+Also, like [`hcubature_return_evalbuf_count`](@ref), it returns a `(I, E,
+buffer, count)` of the estimated integral `I`, the estimated error bound `E`,
+the partition `buffer` achieved during the integration process and a `count` of
+the number of times the integrand `f` was evaluated.
+"""
 hcubature_return_evalbuf_print(args...; buffer=nothing, kws...) =
   hcubature_print(args...; buffer=ReturnEvalBuffer(buffer), kws...)
 
