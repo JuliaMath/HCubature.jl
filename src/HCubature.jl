@@ -393,9 +393,9 @@ and call the [`quadgk`](@ref) function, which provides additional flexibility
 e.g. in choosing the order of the quadrature rule.
 """
 function hquadrature(f, a::T, b::S; norm=norm, rtol::Real=0, atol::Real=0,
-                     maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing) where {T<:Real, S<:Real}
+                     maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing, eval_buffer=nothing) where {T<:Real, S<:Real}
     F = float(promote_type(T, S))
-    hcubature_(x -> f(x[1]), SVector{1,F}(a), SVector{1,F}(b), norm, rtol, atol, maxevals, initdiv, buffer)
+    hcubature_(x -> f(x[1]), SVector{1,F}(a), SVector{1,F}(b), norm, rtol, atol, maxevals, initdiv, buffer, eval_buffer)
 end
 
 end # module
