@@ -106,8 +106,8 @@ function hcubature_(
   f::F, a::SVector{n,T}, b::SVector{n,T}, 
   norm, rtol_, atol, maxevals, initdiv, 
   _buf::Union{Nothing,<:DataStructures.BinaryMaxHeap{<:Box},ReturnEvalBuffer},
-  eval_buf::Union{Nothing, <:DataStructures.BinaryMaxHeap{B}}
-  ) where {F, n, T<:Real, B<:Box}
+  eval_buf::Union{Nothing,<:DataStructures.BinaryMaxHeap{<:Box}}
+  ) where {F, n, T<:Real}
 
     buf = _buf isa ReturnEvalBuffer ? _buf.buf : _buf
 
@@ -120,23 +120,28 @@ function hcubature_(
     evals_per_box = countevals(rule)
 
     if !isnothing(eval_buf)
-      boxes = (buf===nothing) ? DataStructures.BinaryMaxHeap{B}() : (empty!(buf.valtree); buf)
 
       isempty(eval_buf) && throw(ArgumentError("eval_buffer must be non-empty"))
 
-      for box in eval_buf.valtree
+      eval_boxes = eval_buf.valtree
+      x = first(eval_boxes).a
+      y = first(eval_boxes).b
+      I, E, kdiv = rule(f, x,y, norm)
+      firstbox = Box(x, y, I, E, kdiv)
+
+      boxes = (buf===nothing) ? DataStructures.BinaryMaxHeap{typeof(firstbox)}() : (empty!(buf.valtree); buf)
+
+      push!(boxes, firstbox)
+
+      skip = true # skip the first box, which we already added
+      for box in eval_boxes
+        if skip; skip=false; continue; end
         x = box.a
         y = box.b
-        res_box = Box(x, y, rule(f, x,y, norm)...)
-        push!(boxes, res_box)
-      end
-
-      # computing outside above for loop to get the floating-point types right
-      I = zero(first(boxes.valtree).I)
-      E = zero(first(boxes.valtree).E)
-      for box in boxes.valtree
-        I += box.I
-        E += box.E
+        result_box = Box(x, y, rule(f, x,y, norm)...)
+        push!(boxes, result_box)
+        I += result_box.I
+        E += result_box.E
       end
 
       numevals = length(eval_buf.valtree) * evals_per_box
