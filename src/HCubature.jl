@@ -20,7 +20,7 @@ module HCubature
 using StaticArrays, LinearAlgebra
 import Combinatorics, DataStructures, QuadGK
 
-export hcubature, hquadrature, hcubature_buffer, hcubature_count, hcubature_print, hcubature_evalbuffer, hcubature_evalbuffer_count, hcubature_evalbuffer_print
+export hcubature, hquadrature, hcubature_buffer, hcubature_count, hcubature_print, hcubature_return_evalbuf, hcubature_return_evalbuf_count, hcubature_return_evalbuf_print
 
 include("genz-malik.jl")
 include("gauss-kronrod.jl")
@@ -249,7 +249,7 @@ hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
                    maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing) =
     hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, buffer)
 
-hcubature_evalbuffer(args...; buffer=nothing, kws...) =
+hcubature_return_evalbuf(args...; buffer=nothing, kws...) =
   hcubature(args...; buffer=ReturnEvalBuffer(buffer), kws...)
 
 """
@@ -274,7 +274,7 @@ function hcubature_count(f, a, b; kws...)
     return (res..., count[])
 end
 
-hcubature_evalbuffer_count(args...; buffer=nothing, kws...) = 
+hcubature_return_evalbuf_count(args...; buffer=nothing, kws...) = 
   hcubature_count(args...; buffer=ReturnEvalBuffer(buffer), kws...)
 
 """
@@ -300,7 +300,7 @@ hcubature_print(io::IO, f, a, b; kws...) = hcubature_count(a, b; kws...) do x
 end
 hcubature_print(f, a, b; kws...) = hcubature_print(stdout, f, a, b; kws...)
 
-hcubature_evalbuffer_print(args...; buffer=nothing, kws...) =
+hcubature_return_evalbuf_print(args...; buffer=nothing, kws...) =
   hcubature_print(args...; buffer=ReturnEvalBuffer(buffer), kws...)
 
 """
