@@ -105,8 +105,9 @@ end
 function hcubature_(
   f::F, a::SVector{n,T}, b::SVector{n,T}, 
   norm, rtol_, atol, maxevals, initdiv, 
-  _buf::Union{Nothing,<:DataStructures.BinaryMaxHeap{<:Box},ReturnEvalBuffer}
-  ) where {F, n, T<:Real}
+  _buf::Union{Nothing,<:DataStructures.BinaryMaxHeap{<:Box},ReturnEvalBuffer},
+  eval_buf::Union{Nothing, <:DataStructures.BinaryMaxHeap{B}}
+  ) where {F, n, T<:Real, B<:Box}
 
     buf = _buf isa ReturnEvalBuffer ? _buf.buf : _buf
 
@@ -116,40 +117,68 @@ function hcubature_(
     initdiv < 1 && throw(ArgumentError("initdiv must be positive"))
 
     rule = cubrule(Val{n}(), T)
-    numevals = evals_per_box = countevals(rule)
+    evals_per_box = countevals(rule)
 
-    Δ = (b-a) / initdiv
-    b1 = initdiv == 1 ? b : a+Δ
-    I, E, kdiv = rule(f, a,b1, norm)
-    (n == 0 || iszero(prod(Δ))) && return I,E
-    firstbox = Box(a,b1, I,E,kdiv)
-    boxes = (buf===nothing) ? DataStructures.BinaryMaxHeap{typeof(firstbox)}() : (empty!(buf.valtree); buf)
+    if !isnothing(eval_buf)
+      boxes = (buf===nothing) ? DataStructures.BinaryMaxHeap{B}() : (empty!(buf.valtree); buf)
 
-    push!(boxes, firstbox)
+      isempty(eval_buf) && throw(ArgumentError("eval_buffer must be non-empty"))
 
-    ma = Base.copymutable(a)
-    mb = Base.copymutable(b)
+      for box in eval_buf.valtree
+        x = box.a
+        y = box.b
+        res_box = Box(x, y, rule(f, x,y, norm)...)
+        push!(boxes, res_box)
+      end
 
-    if initdiv > 1 # initial box divided by initdiv along each dimension
+      # computing outside above for loop to get the floating-point types right
+      I = zero(first(boxes.valtree).I)
+      E = zero(first(boxes.valtree).E)
+      for box in boxes.valtree
+        I += box.I
+        E += box.E
+      end
+
+      numevals = length(eval_buf.valtree) * evals_per_box
+    else
+      numevals = evals_per_box
+      Δ = (b-a) / initdiv
+      b1 = initdiv == 1 ? b : a+Δ
+      I, E, kdiv = rule(f, a,b1, norm)
+      (n == 0 || iszero(prod(Δ))) && return I,E
+      firstbox = Box(a,b1, I,E,kdiv)
+      boxes = (buf===nothing) ? DataStructures.BinaryMaxHeap{typeof(firstbox)}() : (empty!(buf.valtree); buf)
+
+      push!(boxes, firstbox)
+
+      ma = Base.copymutable(a)
+      mb = Base.copymutable(b)
+
+      if initdiv > 1 # initial box divided by initdiv along each dimension
         skip = true # skip the first box, which we already added
         @inbounds for c in CartesianIndices(ntuple(i->Base.OneTo(initdiv), Val{n}())) # Val ntuple loops are unrolled
-            if skip; skip=false; continue; end
-            for i = 1:n
-                ma[i] = a[i]+(c[i]-1)*Δ[i]
-                mb[i] = c[i]==initdiv ? b[i] : a[i]+c[i]*Δ[i]
-            end
-            x = SVector(ma)
-            y = SVector(mb)
-            # this is shorter and has unrolled loops, but somehow creates a type instability:
-            # x = SVector(ntuple(i -> a[i]+(c[i]-1)*Δ[i], Val{n}()))
-            # y = SVector(ntuple(i -> c[i]==initdiv ? b[i] : a[i]+c[i]*Δ[i], Val{n}()))
-            box = Box(x,y, rule(f, x,y, norm)...)
-            I += box.I; E += box.E; numevals += evals_per_box
-            push!(boxes, box)
+          if skip; skip=false; continue; end
+          for i = 1:n
+              ma[i] = a[i]+(c[i]-1)*Δ[i]
+              mb[i] = c[i]==initdiv ? b[i] : a[i]+c[i]*Δ[i]
+          end
+          x = SVector(ma)
+          y = SVector(mb)
+          # this is shorter and has unrolled loops, but somehow creates a type instability:
+          # x = SVector(ntuple(i -> a[i]+(c[i]-1)*Δ[i], Val{n}()))
+          # y = SVector(ntuple(i -> c[i]==initdiv ? b[i] : a[i]+c[i]*Δ[i], Val{n}()))
+          box = Box(x,y, rule(f, x,y, norm)...)
+          I += box.I; E += box.E; numevals += evals_per_box
+          push!(boxes, box)
         end
+      end
     end
 
-    (E ≤ max(rtol*norm(I), atol) || numevals ≥ maxevals) && return I,E
+    Inorm = norm(I)
+
+    if (E ≤ max(rtol*Inorm, atol) || numevals ≥ maxevals || !isfinite(Inorm))
+      return _buf isa ReturnEvalBuffer ? (I, E, boxes) : (I, E)
+    end
 
     @inbounds while true
         # get box with largest error
@@ -187,18 +216,18 @@ function hcubature_(
 end
 
 function hcubature_(f, a::AbstractVector{T}, b::AbstractVector{S},
-                    norm, rtol, atol, maxevals, initdiv, buf) where {T<:Real, S<:Real}
+                    norm, rtol, atol, maxevals, initdiv, buf, eval_buf) where {T<:Real, S<:Real}
     length(a) == length(b) || throw(DimensionMismatch("endpoints $a and $b must have the same length"))
     F = float(promote_type(T, S))
-    return hcubature_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv, buf)
+    return hcubature_(f, SVector{length(a),F}(a), SVector{length(a),F}(b), norm, rtol, atol, maxevals, initdiv, buf, eval_buf)
 end
-function hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv, buf) where {n}
-    hcubature_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm, rtol, atol, maxevals, initdiv, buf)
+function hcubature_(f, a::Tuple{Vararg{Real,n}}, b::Tuple{Vararg{Real,n}}, norm, rtol, atol, maxevals, initdiv, buf, eval_buf) where {n}
+    hcubature_(f, SVector{n}(float.(a)), SVector{n}(float.(b)), norm, rtol, atol, maxevals, initdiv, buf, eval_buf)
 end
 
 """
     hcubature(f, a, b; norm=norm, rtol=sqrt(eps), atol=0, maxevals=typemax(Int),
-    initdiv=1, buffer=nothing)
+    initdiv=1, buffer=nothing, eval_buffer=nothing)
 
 Compute the n-dimensional integral of f(x), where `n == length(a) == length(b)`,
 over the hypercube whose corners are given by the vectors (or tuples) `a` and `b`.
@@ -246,8 +275,8 @@ computations. You can instead pass a preallocated buffer allocated using
 multiple calls to avoid repeated allocation.
 """
 hcubature(f, a, b; norm=norm, rtol::Real=0, atol::Real=0,
-                   maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing) =
-    hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, buffer)
+                   maxevals::Integer=typemax(Int), initdiv::Integer=1, buffer=nothing, eval_buffer=nothing) =
+    hcubature_(f, a, b, norm, rtol, atol, maxevals, initdiv, buffer, eval_buffer)
 
 hcubature_return_evalbuf(args...; buffer=nothing, kws...) =
   hcubature(args...; buffer=ReturnEvalBuffer(buffer), kws...)
