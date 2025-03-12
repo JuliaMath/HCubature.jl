@@ -119,6 +119,9 @@ function hcubature_(
     rule = cubrule(Val{n}(), T)
     evals_per_box = countevals(rule)
 
+    ma = Base.copymutable(a)
+    mb = Base.copymutable(b)
+
     if !isnothing(eval_buf)
 
       isempty(eval_buf) && throw(ArgumentError("eval_buffer must be non-empty"))
@@ -155,9 +158,6 @@ function hcubature_(
       boxes = (buf===nothing) ? DataStructures.BinaryMaxHeap{typeof(firstbox)}() : (empty!(buf.valtree); buf)
 
       push!(boxes, firstbox)
-
-      ma = Base.copymutable(a)
-      mb = Base.copymutable(b)
 
       if initdiv > 1 # initial box divided by initdiv along each dimension
         skip = true # skip the first box, which we already added
