@@ -139,3 +139,42 @@ end
     @test hquadrature(x -> exp(-x^2), T(0), T(1); rtol = 1e-20)[1] ≈ 0.7468241328124270254
     @test hcubature(x -> exp(-x[1]^2), T.((0,0)), T.((1,1)); rtol = 1e-20)[1] ≈ 0.7468241328124270254
 end
+
+# wrappers to test hcubature_print API without printing anything
+hcubature_printnull(args...; kws...) = hcubature_print(devnull, args...; kws...)
+
+hcubature_return_evalbuf_printnull(args...; kws...) = hcubature_return_evalbuf_print(devnull, args...; kws...)
+
+@testset "eval_buffer" begin
+  osc(x) = sin(33*prod(x) + 5cos(20*sum(x))) # a highly oscillatory function
+  I, E, buf, count = hcubature_return_evalbuf_count(osc, [0.0,0.0], [1.0,1.0])
+  _I, _E, _count = hcubature_count(osc, [0.0,0.0], [1.0,1.0])
+  @test I == _I
+  @test E == _E
+  @test count == _count
+
+  for q in (hcubature, hcubature_count, hcubature_printnull, hcubature_return_evalbuf, hcubature_return_evalbuf_count, hcubature_return_evalbuf_printnull)
+    @test I ≈ q(osc, [0.0,0.0], [1.0,1.0], eval_buffer=buf, maxevals=0)[1] rtol=1e-15
+  end
+
+  I2, E2, buf2 = hcubature_return_evalbuf(x -> sin(x[1] + x[2]), [0.0,0.0], [1.0,1.0], maxevals=0) # 1-interval segbuf
+  @test buf2.valtree == [HCubature.Box(SVector((0.0,0.0)), SVector(1.0,1.0), I2, E2, only(buf2.valtree).kdiv)]
+
+  hcubature(osc, [0.0,0.0], [1.0,1.0], buffer=buf2)
+  @test buf.valtree == buf2.valtree
+
+  hcubature(x -> sin(x[1] + x[2]), [0.0,0.0], [1.0,1.0], buffer=buf2, maxevals=0)
+  @test buf2.valtree == [HCubature.Box(SVector((0.0,0.0)), SVector(1.0,1.0), I2, E2, only(buf2.valtree).kdiv)]
+
+  I3, E3, count3 =  hcubature_count(osc, [0.0,0.0], [1.0,1.0], buffer=buf2, eval_buffer=buf, maxevals=0)
+  @test buf2.valtree == buf.valtree && buf2 !== buf
+  @test I ≈ I3 rtol=1e-15
+  @test E ≈ E3 rtol=1e-15
+  @test count3 == length(buf)*17
+
+  # the partition should already meet the stopping criteria
+  @test hcubature_count(osc, [0.0,0.0], [1.0,1.0], eval_buffer=buf)[3] == length(buf)*17
+
+  # reusing for vector valued integral 
+  @test I ≈ hcubature_count(x -> [sin(100*sum(x)), osc(x)], [0.0,0.0], [1.0,1.0], eval_buffer=buf, maxevals=0)[1][2] rtol=1e-15
+end
