@@ -70,7 +70,7 @@ const gmcache_lock = ReentrantLock() # thread-safety
 
 # internal code to construct n-dimensional Genz-Malik rule for coordinates of type `T`.
 function _GenzMalik(v::Val{n}, ::Type{T}) where {n, T<:Real}
-    n < 2 && throw(ArgumentError("invalid dimension $n: GenzMalik rule requires dimension > 2"))
+    n < 2 && throw(ArgumentError("invalid dimension $n: GenzMalik rule requires dimension ≥ 2"))
 
     λ₄ = sqrt(9/T(10))
     λ₂ = sqrt(9/T(70))
